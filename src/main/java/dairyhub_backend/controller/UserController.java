@@ -17,7 +17,10 @@ import dairyhub_backend.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://dairyhub-five.vercel.app"
+})
 public class UserController {
 
     private final UserService userService;
@@ -31,8 +34,7 @@ public class UserController {
     public ResponseEntity<User> registerUser(
             @RequestBody User user) {
 
-        User savedUser =
-                userService.registerUser(user);
+        User savedUser = userService.registerUser(user);
 
         return ResponseEntity.ok(savedUser);
     }
@@ -42,11 +44,10 @@ public class UserController {
     public ResponseEntity<User> loginUser(
             @RequestBody User loginRequest) {
 
-        User user =
-                userService.loginUser(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                );
+        User user = userService.loginUser(
+                loginRequest.getEmail(),
+                loginRequest.getPassword()
+        );
 
         if (user == null) {
             return ResponseEntity
@@ -69,8 +70,7 @@ public class UserController {
     public ResponseEntity<String> deleteUser(
             @PathVariable Long id) {
 
-        boolean deleted =
-                userService.deleteUser(id);
+        boolean deleted = userService.deleteUser(id);
 
         if (!deleted) {
             return ResponseEntity
