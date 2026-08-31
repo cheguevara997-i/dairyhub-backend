@@ -17,7 +17,10 @@ import dairyhub_backend.service.ProductService;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://dairyhub-five.vercel.app"
+})
 public class ProductController {
 
     private final ProductService productService;
