@@ -18,7 +18,10 @@ import dairyhub_backend.service.OrderService;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://dairyhub-five.vercel.app"
+})
 public class OrderController {
 
     private final OrderService orderService;
@@ -26,6 +29,10 @@ public class OrderController {
     public OrderController(OrderService orderService) {
         this.orderService = orderService;
     }
+
+    // =========================================
+    // CREATE ORDER
+    // =========================================
 
     @PostMapping
     public ResponseEntity<CustomerOrder> createOrder(
@@ -37,6 +44,10 @@ public class OrderController {
         return ResponseEntity.ok(savedOrder);
     }
 
+    // =========================================
+    // GET ALL ORDERS
+    // =========================================
+
     @GetMapping
     public ResponseEntity<List<CustomerOrder>> getAllOrders() {
 
@@ -45,14 +56,23 @@ public class OrderController {
         );
     }
 
+    // =========================================
+    // GET CUSTOMER ORDERS
+    // =========================================
+
     @GetMapping("/customer/{email}")
-    public ResponseEntity<List<CustomerOrder>> getOrdersByCustomerEmail(
-            @PathVariable String email) {
+    public ResponseEntity<List<CustomerOrder>>
+            getOrdersByCustomerEmail(
+                    @PathVariable String email) {
 
         return ResponseEntity.ok(
                 orderService.getOrdersByCustomerEmail(email)
         );
     }
+
+    // =========================================
+    // GET ORDER BY ID
+    // =========================================
 
     @GetMapping("/{id}")
     public ResponseEntity<CustomerOrder> getOrderById(
@@ -68,13 +88,20 @@ public class OrderController {
         return ResponseEntity.ok(order);
     }
 
+    // =========================================
+    // UPDATE ORDER
+    // =========================================
+
     @PutMapping("/{id}")
     public ResponseEntity<CustomerOrder> updateOrder(
             @PathVariable Long id,
             @RequestBody CustomerOrder updatedOrder) {
 
         CustomerOrder order =
-                orderService.updateOrder(id, updatedOrder);
+                orderService.updateOrder(
+                        id,
+                        updatedOrder
+                );
 
         if (order == null) {
             return ResponseEntity.notFound().build();
@@ -82,6 +109,10 @@ public class OrderController {
 
         return ResponseEntity.ok(order);
     }
+
+    // =========================================
+    // DELETE ORDER
+    // =========================================
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(

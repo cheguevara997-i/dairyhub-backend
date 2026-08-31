@@ -18,20 +18,19 @@ import dairyhub_backend.service.SubscriptionService;
 
 @RestController
 @RequestMapping("/api/subscriptions")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://dairyhub-five.vercel.app"
+})
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
-
     public SubscriptionController(
             SubscriptionService subscriptionService) {
 
-        this.subscriptionService =
-                subscriptionService;
-
+        this.subscriptionService = subscriptionService;
     }
-
 
     // =========================================
     // CREATE NEW SUBSCRIPTION
@@ -46,12 +45,8 @@ public class SubscriptionController {
                         subscription
                 );
 
-        return ResponseEntity.ok(
-                savedSubscription
-        );
-
+        return ResponseEntity.ok(savedSubscription);
     }
-
 
     // =========================================
     // SAVE PAID SUBSCRIPTION
@@ -62,17 +57,12 @@ public class SubscriptionController {
             @RequestBody Subscription subscription) {
 
         Subscription savedSubscription =
-                subscriptionService
-                        .savePaidSubscription(
-                                subscription
-                        );
+                subscriptionService.savePaidSubscription(
+                        subscription
+                );
 
-        return ResponseEntity.ok(
-                savedSubscription
-        );
-
+        return ResponseEntity.ok(savedSubscription);
     }
-
 
     // =========================================
     // GET ALL SUBSCRIPTIONS
@@ -83,12 +73,9 @@ public class SubscriptionController {
             getAllSubscriptions() {
 
         return ResponseEntity.ok(
-                subscriptionService
-                        .getAllSubscriptions()
+                subscriptionService.getAllSubscriptions()
         );
-
     }
-
 
     // =========================================
     // GET CUSTOMER SUBSCRIPTIONS
@@ -101,13 +88,9 @@ public class SubscriptionController {
 
         return ResponseEntity.ok(
                 subscriptionService
-                        .getSubscriptionsByCustomerEmail(
-                                email
-                        )
+                        .getSubscriptionsByCustomerEmail(email)
         );
-
     }
-
 
     // =========================================
     // GET SUBSCRIPTION BY ID
@@ -119,23 +102,14 @@ public class SubscriptionController {
                     @PathVariable Long id) {
 
         Subscription subscription =
-                subscriptionService
-                        .getSubscriptionById(id);
+                subscriptionService.getSubscriptionById(id);
 
         if (subscription == null) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(
-                subscription
-        );
-
+        return ResponseEntity.ok(subscription);
     }
-
 
     // =========================================
     // UPDATE SUBSCRIPTION
@@ -145,30 +119,20 @@ public class SubscriptionController {
     public ResponseEntity<Subscription>
             updateSubscription(
                     @PathVariable Long id,
-                    @RequestBody
-                    Subscription updatedSubscription) {
+                    @RequestBody Subscription updatedSubscription) {
 
         Subscription subscription =
-                subscriptionService
-                        .updateSubscription(
-                                id,
-                                updatedSubscription
-                        );
+                subscriptionService.updateSubscription(
+                        id,
+                        updatedSubscription
+                );
 
         if (subscription == null) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(
-                subscription
-        );
-
+        return ResponseEntity.ok(subscription);
     }
-
 
     // =========================================
     // PAUSE SUBSCRIPTION
@@ -180,23 +144,14 @@ public class SubscriptionController {
                     @PathVariable Long id) {
 
         Subscription subscription =
-                subscriptionService
-                        .pauseSubscription(id);
+                subscriptionService.pauseSubscription(id);
 
         if (subscription == null) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(
-                subscription
-        );
-
+        return ResponseEntity.ok(subscription);
     }
-
 
     // =========================================
     // RESUME SUBSCRIPTION
@@ -208,23 +163,14 @@ public class SubscriptionController {
                     @PathVariable Long id) {
 
         Subscription subscription =
-                subscriptionService
-                        .resumeSubscription(id);
+                subscriptionService.resumeSubscription(id);
 
         if (subscription == null) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(
-                subscription
-        );
-
+        return ResponseEntity.ok(subscription);
     }
-
 
     // =========================================
     // CANCEL SUBSCRIPTION
@@ -236,23 +182,14 @@ public class SubscriptionController {
                     @PathVariable Long id) {
 
         Subscription subscription =
-                subscriptionService
-                        .cancelSubscription(id);
+                subscriptionService.cancelSubscription(id);
 
         if (subscription == null) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(
-                subscription
-        );
-
+        return ResponseEntity.ok(subscription);
     }
-
 
     // =========================================
     // DELETE SUBSCRIPTION
@@ -264,21 +201,12 @@ public class SubscriptionController {
                     @PathVariable Long id) {
 
         boolean deleted =
-                subscriptionService
-                        .deleteSubscription(id);
+                subscriptionService.deleteSubscription(id);
 
         if (!deleted) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity
-                .noContent()
-                .build();
-
+        return ResponseEntity.noContent().build();
     }
-
 }
