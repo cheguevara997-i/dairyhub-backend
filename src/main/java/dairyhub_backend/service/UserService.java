@@ -1,6 +1,7 @@
 package dairyhub_backend.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -206,6 +207,75 @@ public class UserService {
     public List<User> getAllUsers() {
 
         return userRepository.findAll();
+    }
+
+    // =========================================
+    // UPDATE USER
+    // =========================================
+
+    public User updateUser(
+            Long id,
+            User updatedUser) {
+
+        Optional<User> optionalUser =
+                userRepository.findById(id);
+
+        if (optionalUser.isEmpty()) {
+            return null;
+        }
+
+        User user =
+                optionalUser.get();
+
+        // =====================================
+        // UPDATE NAME
+        // =====================================
+
+        if (updatedUser.getName() != null) {
+
+            user.setName(
+                    updatedUser.getName()
+            );
+        }
+
+        // =====================================
+        // UPDATE PHONE
+        // =====================================
+
+        user.setPhone(
+                updatedUser.getPhone()
+        );
+
+        // =====================================
+        // UPDATE ROLE
+        // =====================================
+
+        if (updatedUser.getRole() != null) {
+
+            /*
+             * Do not allow changing the protected
+             * ADMIN account's role.
+             */
+            if ("ADMIN".equalsIgnoreCase(
+                    user.getRole())) {
+
+                user.setRole("ADMIN");
+
+            } else {
+
+                user.setRole(
+                        updatedUser.getRole()
+                );
+            }
+        }
+
+        /*
+         * Password is intentionally NOT changed here.
+         *
+         * Email is also NOT changed here.
+         */
+
+        return userRepository.save(user);
     }
 
     // =========================================

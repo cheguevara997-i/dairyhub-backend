@@ -27,6 +27,16 @@ public class Subscription {
 
     private String customerEmail;
 
+    private String phone;
+
+    private String address;
+
+    private String city;
+
+    private String state;
+
+    private String pincode;
+
 
     // =========================================
     // SUBSCRIPTION DETAILS
@@ -139,6 +149,81 @@ public class Subscription {
             String customerEmail) {
 
         this.customerEmail = customerEmail;
+    }
+
+
+    // =========================================
+    // PHONE
+    // =========================================
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(
+            String phone) {
+
+        this.phone = phone;
+    }
+
+
+    // =========================================
+    // ADDRESS
+    // =========================================
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(
+            String address) {
+
+        this.address = address;
+    }
+
+
+    // =========================================
+    // CITY
+    // =========================================
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(
+            String city) {
+
+        this.city = city;
+    }
+
+
+    // =========================================
+    // STATE
+    // =========================================
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(
+            String state) {
+
+        this.state = state;
+    }
+
+
+    // =========================================
+    // PINCODE
+    // =========================================
+
+    public String getPincode() {
+        return pincode;
+    }
+
+    public void setPincode(
+            String pincode) {
+
+        this.pincode = pincode;
     }
 
 

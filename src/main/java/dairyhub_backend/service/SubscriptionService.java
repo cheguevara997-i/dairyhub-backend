@@ -12,14 +12,12 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
 
-
     public SubscriptionService(
             SubscriptionRepository subscriptionRepository) {
 
         this.subscriptionRepository =
                 subscriptionRepository;
     }
-
 
     // =========================================
     // CREATE SUBSCRIPTION
@@ -32,7 +30,6 @@ public class SubscriptionService {
                 subscription
         );
     }
-
 
     // =========================================
     // SAVE PAID SUBSCRIPTION
@@ -51,12 +48,10 @@ public class SubscriptionService {
 
         subscription.setPaymentStatus("PAID");
 
-
         return subscriptionRepository.save(
                 subscription
         );
     }
-
 
     // =========================================
     // GET ALL SUBSCRIPTIONS
@@ -66,7 +61,6 @@ public class SubscriptionService {
 
         return subscriptionRepository.findAll();
     }
-
 
     // =========================================
     // GET CUSTOMER SUBSCRIPTIONS
@@ -80,7 +74,6 @@ public class SubscriptionService {
                 .findByCustomerEmail(customerEmail);
     }
 
-
     // =========================================
     // GET SUBSCRIPTION BY ID
     // =========================================
@@ -92,7 +85,6 @@ public class SubscriptionService {
                 .findById(id)
                 .orElse(null);
     }
-
 
     // =========================================
     // UPDATE SUBSCRIPTION
@@ -107,49 +99,67 @@ public class SubscriptionService {
                         .findById(id)
                         .orElse(null);
 
-
         if (existingSubscription == null) {
 
             return null;
-
         }
 
+        // =========================================
+        // CUSTOMER DETAILS
+        // =========================================
+
+        existingSubscription.setCustomerName(
+                updatedSubscription.getCustomerName()
+        );
 
         existingSubscription.setCustomerEmail(
-                updatedSubscription
-                        .getCustomerEmail()
+                updatedSubscription.getCustomerEmail()
         );
 
+        existingSubscription.setPhone(
+                updatedSubscription.getPhone()
+        );
+
+        existingSubscription.setAddress(
+                updatedSubscription.getAddress()
+        );
+
+        existingSubscription.setCity(
+                updatedSubscription.getCity()
+        );
+
+        existingSubscription.setState(
+                updatedSubscription.getState()
+        );
+
+        existingSubscription.setPincode(
+                updatedSubscription.getPincode()
+        );
+
+        // =========================================
+        // SUBSCRIPTION DETAILS
+        // =========================================
 
         existingSubscription.setMilkType(
-                updatedSubscription
-                        .getMilkType()
+                updatedSubscription.getMilkType()
         );
-
 
         existingSubscription.setQuantity(
-                updatedSubscription
-                        .getQuantity()
+                updatedSubscription.getQuantity()
         );
-
 
         existingSubscription.setDuration(
-                updatedSubscription
-                        .getDuration()
+                updatedSubscription.getDuration()
         );
-
 
         existingSubscription.setDeliveryTime(
-                updatedSubscription
-                        .getDeliveryTime()
+                updatedSubscription.getDeliveryTime()
         );
-
 
         return subscriptionRepository.save(
                 existingSubscription
         );
     }
-
 
     // =========================================
     // PAUSE SUBSCRIPTION
@@ -163,24 +173,19 @@ public class SubscriptionService {
                         .findById(id)
                         .orElse(null);
 
-
         if (subscription == null) {
 
             return null;
-
         }
-
 
         subscription.setStatus(
                 "PAUSED"
         );
 
-
         return subscriptionRepository.save(
                 subscription
         );
     }
-
 
     // =========================================
     // RESUME SUBSCRIPTION
@@ -194,24 +199,19 @@ public class SubscriptionService {
                         .findById(id)
                         .orElse(null);
 
-
         if (subscription == null) {
 
             return null;
-
         }
-
 
         subscription.setStatus(
                 "ACTIVE"
         );
 
-
         return subscriptionRepository.save(
                 subscription
         );
     }
-
 
     // =========================================
     // CANCEL SUBSCRIPTION
@@ -225,24 +225,19 @@ public class SubscriptionService {
                         .findById(id)
                         .orElse(null);
 
-
         if (subscription == null) {
 
             return null;
-
         }
-
 
         subscription.setStatus(
                 "CANCELLED"
         );
 
-
         return subscriptionRepository.save(
                 subscription
         );
     }
-
 
     // =========================================
     // DELETE SUBSCRIPTION
@@ -251,22 +246,15 @@ public class SubscriptionService {
     public boolean deleteSubscription(
             Long id) {
 
-        if (
-                !subscriptionRepository
-                        .existsById(id)
-        ) {
+        if (!subscriptionRepository.existsById(id)) {
 
             return false;
-
         }
-
 
         subscriptionRepository.deleteById(
                 id
         );
 
-
         return true;
     }
-
 }
