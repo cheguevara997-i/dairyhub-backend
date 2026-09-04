@@ -17,10 +17,17 @@ public class User {
     private Long id;
 
 
+    // =========================================
+    // BASIC USER INFORMATION
+    // =========================================
+
     private String name;
 
 
-    @Column(unique = true, nullable = false)
+    @Column(
+            unique = true,
+            nullable = false
+    )
     private String email;
 
 
@@ -33,21 +40,27 @@ public class User {
     private String role;
 
 
+    // =========================================
+    // ADMIN MANAGEMENT
+    // =========================================
+
     /*
-     * =========================================
-     * ADMIN MANAGEMENT FLAG
-     * =========================================
-     *
      * false:
-     * Original/protected admin account
+     * Original/protected admin or normal customer
      *
      * true:
-     * Customer who was promoted to ADMIN
-     * through the admin panel.
+     * Customer promoted to ADMIN through
+     * the Admin Dashboard.
+     *
+     * Boolean is intentionally used instead of
+     * primitive boolean so incoming login/register
+     * JSON is allowed to omit this field.
      */
 
-    @Column(nullable = false)
-    private boolean adminManaged = false;
+    @Column(
+            nullable = false
+    )
+    private Boolean adminManaged = false;
 
 
     // =========================================
@@ -69,7 +82,7 @@ public class User {
             String password,
             String phone,
             String role,
-            boolean adminManaged) {
+            Boolean adminManaged) {
 
         this.id =
                 id;
@@ -105,7 +118,8 @@ public class User {
     }
 
 
-    public void setId(Long id) {
+    public void setId(
+            Long id) {
 
         this.id =
                 id;
@@ -124,7 +138,8 @@ public class User {
     }
 
 
-    public void setName(String name) {
+    public void setName(
+            String name) {
 
         this.name =
                 name;
@@ -143,7 +158,8 @@ public class User {
     }
 
 
-    public void setEmail(String email) {
+    public void setEmail(
+            String email) {
 
         this.email =
                 email;
@@ -162,7 +178,8 @@ public class User {
     }
 
 
-    public void setPassword(String password) {
+    public void setPassword(
+            String password) {
 
         this.password =
                 password;
@@ -181,7 +198,8 @@ public class User {
     }
 
 
-    public void setPhone(String phone) {
+    public void setPhone(
+            String phone) {
 
         this.phone =
                 phone;
@@ -200,7 +218,8 @@ public class User {
     }
 
 
-    public void setRole(String role) {
+    public void setRole(
+            String role) {
 
         this.role =
                 role;
@@ -212,18 +231,46 @@ public class User {
     // ADMIN MANAGED
     // =========================================
 
+    /*
+     * Safely return false when the value is null.
+     */
+
     public boolean isAdminManaged() {
 
-        return adminManaged;
+        return Boolean.TRUE.equals(
+                adminManaged
+        );
 
     }
 
 
     public void setAdminManaged(
-            boolean adminManaged) {
+            Boolean adminManaged) {
+
+        /*
+         * Never allow the entity to keep a null value.
+         */
 
         this.adminManaged =
-                adminManaged;
+                adminManaged != null
+                        ? adminManaged
+                        : false;
+
+    }
+
+
+    // =========================================
+    // OPTIONAL DIRECT GETTER
+    // =========================================
+
+    /*
+     * Useful if Jackson/frontend needs the actual
+     * Boolean property during JSON serialization.
+     */
+
+    public Boolean getAdminManaged() {
+
+        return adminManaged;
 
     }
 
