@@ -14,42 +14,119 @@ import dairyhub_backend.repository.UserRepository;
 @Service
 public class UserService {
 
+    // =====================================================
+    // GOOGLE CONFIGURATION
+    // =====================================================
+
     private static final String GOOGLE_CLIENT_ID =
             "687009414509-5aft1ji4r2b9o8hfadsnfavn1nk6cs4c.apps.googleusercontent.com";
 
     private static final String GOOGLE_ISSUER =
             "https://accounts.google.com";
 
+
+    // =====================================================
+    // ORIGINAL PROTECTED ADMIN
+    // =====================================================
+
+    /*
+     * This is the ONLY permanently protected admin.
+     *
+     * It cannot be:
+     * - demoted
+     * - deleted
+     *
+     * Any other user with ADMIN role is considered
+     * a managed/promoted admin.
+     */
+
+    private static final String PROTECTED_ADMIN_EMAIL =
+            "admin@dairyhub.com";
+
+
     private final UserRepository userRepository;
 
     private final TokenVerifier googleTokenVerifier;
 
-    public UserService(UserRepository userRepository) {
 
-        this.userRepository = userRepository;
+    // =====================================================
+    // CONSTRUCTOR
+    // =====================================================
+
+    public UserService(
+            UserRepository userRepository) {
+
+        this.userRepository =
+                userRepository;
+
 
         this.googleTokenVerifier =
                 TokenVerifier
                         .newBuilder()
-                        .setAudience(GOOGLE_CLIENT_ID)
-                        .setIssuer(GOOGLE_ISSUER)
+                        .setAudience(
+                                GOOGLE_CLIENT_ID
+                        )
+                        .setIssuer(
+                                GOOGLE_ISSUER
+                        )
                         .build();
     }
 
-    // =========================================
-    // REGISTER CUSTOMER
-    // =========================================
 
-    public User registerUser(User user) {
+    // =====================================================
+    // CHECK PROTECTED ADMIN
+    // =====================================================
 
-        user.setRole("CUSTOMER");
+    private boolean isProtectedAdmin(
+            User user) {
 
-        return userRepository.save(user);
+        if (user == null) {
+
+            return false;
+
+        }
+
+
+        return PROTECTED_ADMIN_EMAIL
+                .equalsIgnoreCase(
+                        user.getEmail()
+                );
     }
 
-    // =========================================
+
+    // =====================================================
+    // REGISTER CUSTOMER
+    // =====================================================
+
+    public User registerUser(
+            User user) {
+
+        /*
+         * Every new registration is always CUSTOMER.
+         *
+         * A user must never be able to register
+         * directly as ADMIN.
+         */
+
+        user.setRole(
+                "CUSTOMER"
+        );
+
+
+        user.setAdminManaged(
+                false
+        );
+
+
+        return userRepository.save(
+                user
+        );
+    }
+
+
+    // =====================================================
     // NORMAL EMAIL + PASSWORD LOGIN
-    // =========================================
+    // =====================================================
 
     public User loginUser(
             String email,
@@ -60,134 +137,220 @@ public class UserService {
                         .findByEmail(email)
                         .orElse(null);
 
+
         if (user == null) {
+
             return null;
+
         }
+
 
         /*
-         * Google-created users do not have a normal password.
+         * Google-created users do not have
+         * a normal password.
          */
+
         if (user.getPassword() == null) {
+
             return null;
+
         }
 
-        if (!user.getPassword().equals(password)) {
+
+        if (!user.getPassword().equals(
+                password
+        )) {
+
             return null;
+
         }
+
 
         return user;
     }
 
-    // =========================================
-    // GOOGLE LOGIN
-    // =========================================
 
-    public User loginWithGoogle(String credential) {
+    // =====================================================
+    // GOOGLE LOGIN
+    // =====================================================
+
+    public User loginWithGoogle(
+            String credential) {
 
         try {
 
             JsonWebSignature token =
-                    googleTokenVerifier.verify(credential);
+                    googleTokenVerifier.verify(
+                            credential
+                    );
+
 
             if (token == null) {
+
                 return null;
+
             }
+
 
             JsonWebSignature.Header header =
                     token.getHeader();
 
+
             if (header == null) {
+
                 return null;
+
             }
+
 
             JsonWebSignature.Payload payload =
                     token.getPayload();
 
+
             if (payload == null) {
+
                 return null;
+
             }
+
 
             Object emailObject =
-                    payload.get("email");
+                    payload.get(
+                            "email"
+                    );
+
 
             Object emailVerifiedObject =
-                    payload.get("email_verified");
+                    payload.get(
+                            "email_verified"
+                    );
+
 
             Object nameObject =
-                    payload.get("name");
+                    payload.get(
+                            "name"
+                    );
+
 
             if (emailObject == null) {
+
                 return null;
+
             }
 
+
             String email =
-                    emailObject.toString()
+                    emailObject
+                            .toString()
                             .trim()
                             .toLowerCase();
 
-            /*
-             * Must be a real Gmail address.
-             * Google token itself is verified above.
-             */
-            if (!email.endsWith("@gmail.com")) {
-                return null;
-            }
 
             /*
-             * Google must confirm that the email is verified.
+             * Only Gmail accounts are accepted.
              */
+
+            if (!email.endsWith(
+                    "@gmail.com"
+            )) {
+
+                return null;
+
+            }
+
+
+            /*
+             * Google must confirm that
+             * the email is verified.
+             */
+
             if (!Boolean.TRUE.equals(
-                    emailVerifiedObject)) {
+                    emailVerifiedObject
+            )) {
 
                 return null;
+
             }
+
 
             String name =
                     nameObject == null
                             ? "DairyHub Customer"
                             : nameObject.toString();
 
+
             /*
-             * Check whether this Gmail already exists.
+             * Check existing user.
              */
+
             User existingUser =
                     userRepository
                             .findByEmail(email)
                             .orElse(null);
 
+
             if (existingUser != null) {
 
                 return existingUser;
+
             }
 
+
             /*
-             * Create a new DairyHub customer.
+             * Create a new customer.
              */
+
             User newUser =
                     new User();
 
-            newUser.setName(name);
-            newUser.setEmail(email);
 
-            /*
-             * Google users do not use the normal
-             * email/password login.
-             */
-            newUser.setPassword(null);
+            newUser.setName(
+                    name
+            );
 
-            newUser.setPhone(null);
-            newUser.setRole("CUSTOMER");
 
-            return userRepository.save(newUser);
+            newUser.setEmail(
+                    email
+            );
 
-        } catch (TokenVerifier.VerificationException e) {
+
+            newUser.setPassword(
+                    null
+            );
+
+
+            newUser.setPhone(
+                    null
+            );
+
+
+            newUser.setRole(
+                    "CUSTOMER"
+            );
+
+
+            newUser.setAdminManaged(
+                    false
+            );
+
+
+            return userRepository.save(
+                    newUser
+            );
+
+
+        } catch (
+                TokenVerifier.VerificationException e
+        ) {
 
             System.out.println(
                     "Google token verification failed: "
                             + e.getMessage()
             );
 
+
             return null;
+
 
         } catch (Exception e) {
 
@@ -196,22 +359,25 @@ public class UserService {
                             + e.getMessage()
             );
 
+
             return null;
         }
     }
 
-    // =========================================
+
+    // =====================================================
     // GET ALL USERS
-    // =========================================
+    // =====================================================
 
     public List<User> getAllUsers() {
 
         return userRepository.findAll();
     }
 
-    // =========================================
+
+    // =====================================================
     // UPDATE USER
-    // =========================================
+    // =====================================================
 
     public User updateUser(
             Long id,
@@ -220,89 +386,181 @@ public class UserService {
         Optional<User> optionalUser =
                 userRepository.findById(id);
 
+
         if (optionalUser.isEmpty()) {
+
             return null;
+
         }
+
 
         User user =
                 optionalUser.get();
 
-        // =====================================
-        // UPDATE NAME
-        // =====================================
 
-        if (updatedUser.getName() != null) {
+        // =================================================
+        // UPDATE NAME
+        // =================================================
+
+        if (
+                updatedUser.getName() != null
+        ) {
 
             user.setName(
                     updatedUser.getName()
             );
         }
 
-        // =====================================
+
+        // =================================================
         // UPDATE PHONE
-        // =====================================
+        // =================================================
 
         user.setPhone(
                 updatedUser.getPhone()
         );
 
-        // =====================================
+
+        // =================================================
         // UPDATE ROLE
-        // =====================================
+        // =================================================
 
-        if (updatedUser.getRole() != null) {
+        if (
+                updatedUser.getRole() != null
+        ) {
 
-            /*
-             * Do not allow changing the protected
-             * ADMIN account's role.
-             */
-            if ("ADMIN".equalsIgnoreCase(
-                    user.getRole())) {
+            String requestedRole =
+                    updatedUser.getRole()
+                            .trim()
+                            .toUpperCase();
 
-                user.setRole("ADMIN");
 
-            } else {
+            // ---------------------------------------------
+            // ORIGINAL PROTECTED ADMIN
+            // ---------------------------------------------
+
+            if (
+                    isProtectedAdmin(user)
+            ) {
+
+                /*
+                 * admin@dairyhub.com ALWAYS remains ADMIN.
+                 */
 
                 user.setRole(
-                        updatedUser.getRole()
+                        "ADMIN"
                 );
+
+
+                user.setAdminManaged(
+                        false
+                );
+
+            }
+
+
+            // ---------------------------------------------
+            // ANY OTHER USER PROMOTED TO ADMIN
+            // ---------------------------------------------
+
+            else if (
+                    "ADMIN".equals(
+                            requestedRole
+                    )
+            ) {
+
+                user.setRole(
+                        "ADMIN"
+                );
+
+
+                /*
+                 * This marks the account as a
+                 * promoted/managed admin.
+                 */
+
+                user.setAdminManaged(
+                        true
+                );
+
+            }
+
+
+            // ---------------------------------------------
+            // ANY OTHER USER → CUSTOMER
+            // ---------------------------------------------
+
+            else {
+
+                user.setRole(
+                        "CUSTOMER"
+                );
+
+
+                /*
+                 * Once admin access is removed,
+                 * this goes back to normal customer.
+                 */
+
+                user.setAdminManaged(
+                        false
+                );
+
             }
         }
 
+
         /*
-         * Password is intentionally NOT changed here.
+         * Password intentionally not changed.
          *
-         * Email is also NOT changed here.
+         * Email intentionally not changed.
          */
 
-        return userRepository.save(user);
+        return userRepository.save(
+                user
+        );
     }
 
-    // =========================================
-    // DELETE USER
-    // =========================================
 
-    public boolean deleteUser(Long id) {
+    // =====================================================
+    // DELETE USER
+    // =====================================================
+
+    public boolean deleteUser(
+            Long id) {
 
         User user =
                 userRepository
                         .findById(id)
                         .orElse(null);
 
+
         if (user == null) {
+
             return false;
+
         }
+
 
         /*
-         * Do not allow Admin account deletion.
+         * ONLY the original admin is protected.
+         *
+         * Other ADMIN accounts can be deleted.
          */
-        if ("ADMIN".equalsIgnoreCase(
-                user.getRole())) {
+
+        if (
+                isProtectedAdmin(user)
+        ) {
 
             return false;
+
         }
 
-        userRepository.deleteById(id);
+
+        userRepository.deleteById(
+                id
+        );
+
 
         return true;
     }
