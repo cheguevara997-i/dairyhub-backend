@@ -7,7 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-
 @Entity
 @Table(name = "users")
 public class User {
@@ -18,7 +17,7 @@ public class User {
 
 
     // =========================================
-    // BASIC USER INFORMATION
+    // USER INFORMATION
     // =========================================
 
     private String name;
@@ -45,19 +44,17 @@ public class User {
     // =========================================
 
     /*
-     * false:
-     * Original/protected admin or normal customer
+     * false = normal customer / protected admin
      *
-     * true:
-     * Customer promoted to ADMIN through
-     * the Admin Dashboard.
+     * true = customer promoted to ADMIN
      *
-     * Boolean is intentionally used instead of
-     * primitive boolean so incoming login/register
-     * JSON is allowed to omit this field.
+     * Boolean is used instead of primitive boolean
+     * so login/register JSON is allowed to omit this
+     * property.
      */
 
     @Column(
+            name = "admin_managed",
             nullable = false
     )
     private Boolean adminManaged = false;
@@ -84,26 +81,22 @@ public class User {
             String role,
             Boolean adminManaged) {
 
-        this.id =
-                id;
+        this.id = id;
 
-        this.name =
-                name;
+        this.name = name;
 
-        this.email =
-                email;
+        this.email = email;
 
-        this.password =
-                password;
+        this.password = password;
 
-        this.phone =
-                phone;
+        this.phone = phone;
 
-        this.role =
-                role;
+        this.role = role;
 
         this.adminManaged =
-                adminManaged;
+                adminManaged != null
+                        ? adminManaged
+                        : false;
     }
 
 
@@ -112,18 +105,12 @@ public class User {
     // =========================================
 
     public Long getId() {
-
         return id;
-
     }
 
 
-    public void setId(
-            Long id) {
-
-        this.id =
-                id;
-
+    public void setId(Long id) {
+        this.id = id;
     }
 
 
@@ -132,18 +119,12 @@ public class User {
     // =========================================
 
     public String getName() {
-
         return name;
-
     }
 
 
-    public void setName(
-            String name) {
-
-        this.name =
-                name;
-
+    public void setName(String name) {
+        this.name = name;
     }
 
 
@@ -152,18 +133,12 @@ public class User {
     // =========================================
 
     public String getEmail() {
-
         return email;
-
     }
 
 
-    public void setEmail(
-            String email) {
-
-        this.email =
-                email;
-
+    public void setEmail(String email) {
+        this.email = email;
     }
 
 
@@ -172,18 +147,12 @@ public class User {
     // =========================================
 
     public String getPassword() {
-
         return password;
-
     }
 
 
-    public void setPassword(
-            String password) {
-
-        this.password =
-                password;
-
+    public void setPassword(String password) {
+        this.password = password;
     }
 
 
@@ -192,18 +161,12 @@ public class User {
     // =========================================
 
     public String getPhone() {
-
         return phone;
-
     }
 
 
-    public void setPhone(
-            String phone) {
-
-        this.phone =
-                phone;
-
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
 
@@ -212,18 +175,12 @@ public class User {
     // =========================================
 
     public String getRole() {
-
         return role;
-
     }
 
 
-    public void setRole(
-            String role) {
-
-        this.role =
-                role;
-
+    public void setRole(String role) {
+        this.role = role;
     }
 
 
@@ -232,46 +189,26 @@ public class User {
     // =========================================
 
     /*
-     * Safely return false when the value is null.
+     * IMPORTANT:
+     *
+     * Use getAdminManaged(), NOT isAdminManaged().
+     *
+     * This prevents Jackson from interpreting the
+     * property as primitive boolean.
      */
 
-    public boolean isAdminManaged() {
-
-        return Boolean.TRUE.equals(
-                adminManaged
-        );
-
+    public Boolean getAdminManaged() {
+        return adminManaged;
     }
 
 
     public void setAdminManaged(
             Boolean adminManaged) {
 
-        /*
-         * Never allow the entity to keep a null value.
-         */
-
         this.adminManaged =
                 adminManaged != null
                         ? adminManaged
                         : false;
-
-    }
-
-
-    // =========================================
-    // OPTIONAL DIRECT GETTER
-    // =========================================
-
-    /*
-     * Useful if Jackson/frontend needs the actual
-     * Boolean property during JSON serialization.
-     */
-
-    public Boolean getAdminManaged() {
-
-        return adminManaged;
-
     }
 
 }

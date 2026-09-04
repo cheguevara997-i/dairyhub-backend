@@ -14,9 +14,9 @@ import dairyhub_backend.repository.UserRepository;
 @Service
 public class UserService {
 
-    // =====================================================
+    // =========================================
     // GOOGLE CONFIGURATION
-    // =====================================================
+    // =========================================
 
     private static final String GOOGLE_CLIENT_ID =
             "687009414509-5aft1ji4r2b9o8hfadsnfavn1nk6cs4c.apps.googleusercontent.com";
@@ -25,20 +25,9 @@ public class UserService {
             "https://accounts.google.com";
 
 
-    // =====================================================
+    // =========================================
     // ORIGINAL PROTECTED ADMIN
-    // =====================================================
-
-    /*
-     * This is the ONLY permanently protected admin.
-     *
-     * It cannot be:
-     * - demoted
-     * - deleted
-     *
-     * Any other user with ADMIN role is considered
-     * a managed/promoted admin.
-     */
+    // =========================================
 
     private static final String PROTECTED_ADMIN_EMAIL =
             "admin@dairyhub.com";
@@ -49,9 +38,9 @@ public class UserService {
     private final TokenVerifier googleTokenVerifier;
 
 
-    // =====================================================
+    // =========================================
     // CONSTRUCTOR
-    // =====================================================
+    // =========================================
 
     public UserService(
             UserRepository userRepository) {
@@ -73,9 +62,9 @@ public class UserService {
     }
 
 
-    // =====================================================
+    // =========================================
     // CHECK PROTECTED ADMIN
-    // =====================================================
+    // =========================================
 
     private boolean isProtectedAdmin(
             User user) {
@@ -83,29 +72,24 @@ public class UserService {
         if (user == null) {
 
             return false;
-
         }
 
 
-        return PROTECTED_ADMIN_EMAIL
-                .equalsIgnoreCase(
-                        user.getEmail()
-                );
+        return PROTECTED_ADMIN_EMAIL.equalsIgnoreCase(
+                user.getEmail()
+        );
     }
 
 
-    // =====================================================
+    // =========================================
     // REGISTER CUSTOMER
-    // =====================================================
+    // =========================================
 
     public User registerUser(
             User user) {
 
         /*
-         * Every new registration is always CUSTOMER.
-         *
-         * A user must never be able to register
-         * directly as ADMIN.
+         * Nobody can register directly as ADMIN.
          */
 
         user.setRole(
@@ -124,9 +108,9 @@ public class UserService {
     }
 
 
-    // =====================================================
-    // NORMAL EMAIL + PASSWORD LOGIN
-    // =====================================================
+    // =========================================
+    // NORMAL LOGIN
+    // =========================================
 
     public User loginUser(
             String email,
@@ -141,19 +125,17 @@ public class UserService {
         if (user == null) {
 
             return null;
-
         }
 
 
         /*
-         * Google-created users do not have
-         * a normal password.
+         * Google users do not have a
+         * normal password.
          */
 
         if (user.getPassword() == null) {
 
             return null;
-
         }
 
 
@@ -162,7 +144,6 @@ public class UserService {
         )) {
 
             return null;
-
         }
 
 
@@ -170,9 +151,9 @@ public class UserService {
     }
 
 
-    // =====================================================
+    // =========================================
     // GOOGLE LOGIN
-    // =====================================================
+    // =========================================
 
     public User loginWithGoogle(
             String credential) {
@@ -188,7 +169,6 @@ public class UserService {
             if (token == null) {
 
                 return null;
-
             }
 
 
@@ -199,7 +179,6 @@ public class UserService {
             if (header == null) {
 
                 return null;
-
             }
 
 
@@ -210,7 +189,6 @@ public class UserService {
             if (payload == null) {
 
                 return null;
-
             }
 
 
@@ -235,7 +213,6 @@ public class UserService {
             if (emailObject == null) {
 
                 return null;
-
             }
 
 
@@ -246,30 +223,19 @@ public class UserService {
                             .toLowerCase();
 
 
-            /*
-             * Only Gmail accounts are accepted.
-             */
-
             if (!email.endsWith(
                     "@gmail.com"
             )) {
 
                 return null;
-
             }
 
-
-            /*
-             * Google must confirm that
-             * the email is verified.
-             */
 
             if (!Boolean.TRUE.equals(
                     emailVerifiedObject
             )) {
 
                 return null;
-
             }
 
 
@@ -278,10 +244,6 @@ public class UserService {
                             ? "DairyHub Customer"
                             : nameObject.toString();
 
-
-            /*
-             * Check existing user.
-             */
 
             User existingUser =
                     userRepository
@@ -292,13 +254,8 @@ public class UserService {
             if (existingUser != null) {
 
                 return existingUser;
-
             }
 
-
-            /*
-             * Create a new customer.
-             */
 
             User newUser =
                     new User();
@@ -365,9 +322,9 @@ public class UserService {
     }
 
 
-    // =====================================================
+    // =========================================
     // GET ALL USERS
-    // =====================================================
+    // =========================================
 
     public List<User> getAllUsers() {
 
@@ -375,9 +332,9 @@ public class UserService {
     }
 
 
-    // =====================================================
+    // =========================================
     // UPDATE USER
-    // =====================================================
+    // =========================================
 
     public User updateUser(
             Long id,
@@ -390,7 +347,6 @@ public class UserService {
         if (optionalUser.isEmpty()) {
 
             return null;
-
         }
 
 
@@ -398,9 +354,9 @@ public class UserService {
                 optionalUser.get();
 
 
-        // =================================================
+        // =====================================
         // UPDATE NAME
-        // =================================================
+        // =====================================
 
         if (
                 updatedUser.getName() != null
@@ -412,18 +368,18 @@ public class UserService {
         }
 
 
-        // =================================================
+        // =====================================
         // UPDATE PHONE
-        // =================================================
+        // =====================================
 
         user.setPhone(
                 updatedUser.getPhone()
         );
 
 
-        // =================================================
+        // =====================================
         // UPDATE ROLE
-        // =================================================
+        // =====================================
 
         if (
                 updatedUser.getRole() != null
@@ -435,17 +391,13 @@ public class UserService {
                             .toUpperCase();
 
 
-            // ---------------------------------------------
+            // ---------------------------------
             // ORIGINAL PROTECTED ADMIN
-            // ---------------------------------------------
+            // ---------------------------------
 
             if (
                     isProtectedAdmin(user)
             ) {
-
-                /*
-                 * admin@dairyhub.com ALWAYS remains ADMIN.
-                 */
 
                 user.setRole(
                         "ADMIN"
@@ -455,13 +407,12 @@ public class UserService {
                 user.setAdminManaged(
                         false
                 );
-
             }
 
 
-            // ---------------------------------------------
-            // ANY OTHER USER PROMOTED TO ADMIN
-            // ---------------------------------------------
+            // ---------------------------------
+            // OTHER USER → ADMIN
+            // ---------------------------------
 
             else if (
                     "ADMIN".equals(
@@ -474,21 +425,15 @@ public class UserService {
                 );
 
 
-                /*
-                 * This marks the account as a
-                 * promoted/managed admin.
-                 */
-
                 user.setAdminManaged(
                         true
                 );
-
             }
 
 
-            // ---------------------------------------------
-            // ANY OTHER USER → CUSTOMER
-            // ---------------------------------------------
+            // ---------------------------------
+            // OTHER USER → CUSTOMER
+            // ---------------------------------
 
             else {
 
@@ -497,24 +442,12 @@ public class UserService {
                 );
 
 
-                /*
-                 * Once admin access is removed,
-                 * this goes back to normal customer.
-                 */
-
                 user.setAdminManaged(
                         false
                 );
-
             }
         }
 
-
-        /*
-         * Password intentionally not changed.
-         *
-         * Email intentionally not changed.
-         */
 
         return userRepository.save(
                 user
@@ -522,9 +455,9 @@ public class UserService {
     }
 
 
-    // =====================================================
+    // =========================================
     // DELETE USER
-    // =====================================================
+    // =========================================
 
     public boolean deleteUser(
             Long id) {
@@ -538,12 +471,11 @@ public class UserService {
         if (user == null) {
 
             return false;
-
         }
 
 
         /*
-         * ONLY the original admin is protected.
+         * ONLY admin@dairyhub.com is protected.
          *
          * Other ADMIN accounts can be deleted.
          */
@@ -553,7 +485,6 @@ public class UserService {
         ) {
 
             return false;
-
         }
 
 
@@ -564,4 +495,5 @@ public class UserService {
 
         return true;
     }
+
 }
