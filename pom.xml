@@ -10,7 +10,9 @@
     <modelVersion>4.0.0</modelVersion>
 
 
-    <!-- Spring Boot -->
+    <!-- =========================================
+         SPRING BOOT
+    ========================================== -->
 
     <parent>
 
@@ -31,7 +33,9 @@
     </parent>
 
 
-    <!-- Project Information -->
+    <!-- =========================================
+         PROJECT INFORMATION
+    ========================================== -->
 
     <groupId>
         com.dairyhub
@@ -54,7 +58,9 @@
     </description>
 
 
-    <!-- Java -->
+    <!-- =========================================
+         JAVA
+    ========================================== -->
 
     <properties>
 
@@ -65,12 +71,16 @@
     </properties>
 
 
-    <!-- Dependencies -->
+    <!-- =========================================
+         DEPENDENCIES
+    ========================================== -->
 
     <dependencies>
 
 
-        <!-- Spring Data JPA -->
+        <!-- =====================================
+             SPRING DATA JPA
+        ====================================== -->
 
         <dependency>
 
@@ -85,7 +95,9 @@
         </dependency>
 
 
-        <!-- Validation -->
+        <!-- =====================================
+             VALIDATION
+        ====================================== -->
 
         <dependency>
 
@@ -100,7 +112,9 @@
         </dependency>
 
 
-        <!-- Google ID Token Verification -->
+        <!-- =====================================
+             GOOGLE ID TOKEN VERIFICATION
+        ====================================== -->
 
         <dependency>
 
@@ -119,7 +133,9 @@
         </dependency>
 
 
-        <!-- Spring Web -->
+        <!-- =====================================
+             SPRING WEB
+        ====================================== -->
 
         <dependency>
 
@@ -134,7 +150,9 @@
         </dependency>
 
 
-        <!-- MySQL -->
+        <!-- =====================================
+             MYSQL
+        ====================================== -->
 
         <dependency>
 
@@ -153,7 +171,9 @@
         </dependency>
 
 
-        <!-- Lombok -->
+        <!-- =====================================
+             LOMBOK
+        ====================================== -->
 
         <dependency>
 
@@ -172,7 +192,9 @@
         </dependency>
 
 
-        <!-- Razorpay -->
+        <!-- =====================================
+             RAZORPAY
+        ====================================== -->
 
         <dependency>
 
@@ -191,7 +213,80 @@
         </dependency>
 
 
-        <!-- TEST DEPENDENCIES -->
+        <!-- =====================================
+             JWT API
+        ====================================== -->
+
+        <dependency>
+
+            <groupId>
+                io.jsonwebtoken
+            </groupId>
+
+            <artifactId>
+                jjwt-api
+            </artifactId>
+
+            <version>
+                0.12.6
+            </version>
+
+        </dependency>
+
+
+        <!-- =====================================
+             JWT IMPLEMENTATION
+        ====================================== -->
+
+        <dependency>
+
+            <groupId>
+                io.jsonwebtoken
+            </groupId>
+
+            <artifactId>
+                jjwt-impl
+            </artifactId>
+
+            <version>
+                0.12.6
+            </version>
+
+            <scope>
+                runtime
+            </scope>
+
+        </dependency>
+
+
+        <!-- =====================================
+             JWT JACKSON SUPPORT
+        ====================================== -->
+
+        <dependency>
+
+            <groupId>
+                io.jsonwebtoken
+            </groupId>
+
+            <artifactId>
+                jjwt-jackson
+            </artifactId>
+
+            <version>
+                0.12.6
+            </version>
+
+            <scope>
+                runtime
+            </scope>
+
+        </dependency>
+
+
+        <!-- =====================================
+             TEST DEPENDENCIES
+        ====================================== -->
 
         <dependency>
 
@@ -247,14 +342,18 @@
     </dependencies>
 
 
-    <!-- Build -->
+    <!-- =========================================
+         BUILD
+    ========================================== -->
 
     <build>
 
         <plugins>
 
 
-            <!-- Spring Boot -->
+            <!-- =================================
+                 SPRING BOOT
+            ================================== -->
 
             <plugin>
 
@@ -269,7 +368,9 @@
             </plugin>
 
 
-            <!-- Maven Compiler -->
+            <!-- =================================
+                 MAVEN COMPILER
+            ================================== -->
 
             <plugin>
 
@@ -283,6 +384,11 @@
 
 
                 <executions>
+
+
+                    <!-- =============================
+                         MAIN COMPILE
+                    ============================== -->
 
                     <execution>
 
@@ -326,6 +432,10 @@
                     </execution>
 
 
+                    <!-- =============================
+                         TEST COMPILE
+                    ============================== -->
+
                     <execution>
 
                         <id>
@@ -366,6 +476,7 @@
                         </configuration>
 
                     </execution>
+
 
                 </executions>
 

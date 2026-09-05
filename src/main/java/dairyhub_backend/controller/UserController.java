@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dairyhub_backend.entity.User;
+import dairyhub_backend.service.JwtService;
 import dairyhub_backend.service.UserService;
 
 
@@ -33,16 +35,198 @@ public class UserController {
 
     private final UserService userService;
 
+    private final JwtService jwtService;
+
 
     // =========================================
     // CONSTRUCTOR
     // =========================================
 
     public UserController(
-            UserService userService) {
+            UserService userService,
+            JwtService jwtService) {
 
         this.userService =
                 userService;
+
+        this.jwtService =
+                jwtService;
+    }
+
+
+    // =========================================
+    // SAFE USER RESPONSE
+    // =========================================
+
+    /*
+     * IMPORTANT:
+     *
+     * Never return the User entity directly
+     * from login/register APIs because the User
+     * entity contains the password field.
+     *
+     * This method creates a response containing
+     * only information the frontend actually needs.
+     */
+
+    private Map<String, Object> createSafeUserResponse(
+            User user,
+            String token) {
+
+        Map<String, Object> response =
+                new HashMap<>();
+
+
+        response.put(
+                "id",
+                user.getId()
+        );
+
+
+        response.put(
+                "name",
+                user.getName()
+        );
+
+
+        response.put(
+                "email",
+                user.getEmail()
+        );
+
+
+        response.put(
+                "phone",
+                user.getPhone()
+        );
+
+
+        response.put(
+                "role",
+                user.getRole()
+        );
+
+
+        response.put(
+                "adminManaged",
+                user.getAdminManaged()
+        );
+
+
+        response.put(
+                "deleted",
+                user.getDeleted()
+        );
+
+
+        /*
+         * Token is included for authenticated
+         * frontend requests.
+         */
+
+        if (
+                token != null &&
+                !token.trim().isEmpty()
+        ) {
+
+            response.put(
+                    "token",
+                    token
+            );
+        }
+
+
+        return response;
+    }
+
+
+    // =========================================
+    // EXTRACT BEARER TOKEN
+    // =========================================
+
+    private String extractToken(
+            String authorizationHeader) {
+
+        if (
+                authorizationHeader == null ||
+                authorizationHeader.trim().isEmpty()
+        ) {
+
+            return null;
+        }
+
+
+        if (
+                !authorizationHeader
+                        .startsWith("Bearer ")
+        ) {
+
+            return null;
+        }
+
+
+        String token =
+                authorizationHeader
+                        .substring(7)
+                        .trim();
+
+
+        if (
+                token.isEmpty()
+        ) {
+
+            return null;
+        }
+
+
+        return token;
+    }
+
+
+    // =========================================
+    // CHECK ADMIN AUTHORIZATION
+    // =========================================
+
+    private boolean isAuthorizedAdmin(
+            String authorizationHeader) {
+
+        String token =
+                extractToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return false;
+        }
+
+
+        /*
+         * First verify that the token itself
+         * is valid.
+         */
+
+        if (
+                !jwtService.isValidToken(
+                        token
+                )
+        ) {
+
+            return false;
+        }
+
+
+        /*
+         * Then verify that the authenticated
+         * user has ADMIN role.
+         */
+
+        return jwtService.isAdmin(
+                token
+        );
     }
 
 
@@ -78,7 +262,6 @@ public class UserController {
         );
 
         /*
-         * IMPORTANT:
          * Password is intentionally NOT printed.
          */
 
@@ -120,17 +303,23 @@ public class UserController {
             );
 
 
+            /*
+             * Do not send the password back.
+             *
+             * Registration does not need to
+             * automatically log the user in,
+             * so no JWT token is generated here.
+             */
+
             return ResponseEntity.ok(
-                    savedUser
+                    createSafeUserResponse(
+                            savedUser,
+                            null
+                    )
             );
 
 
         } catch (Exception e) {
-
-            /*
-             * Print the REAL backend exception
-             * into Render Logs.
-             */
 
             System.err.println(
                     "========================================="
@@ -160,20 +349,26 @@ public class UserController {
             Map<String, Object> error =
                     new HashMap<>();
 
+
             error.put(
                     "success",
                     false
             );
 
+
             error.put(
                     "message",
-                    "Registration failed on the backend."
+                    e.getMessage() != null
+                            ? e.getMessage()
+                            : "Registration failed on the backend."
             );
+
 
             error.put(
                     "errorType",
                     e.getClass().getSimpleName()
             );
+
 
             error.put(
                     "errorDetail",
@@ -183,7 +378,7 @@ public class UserController {
 
             return ResponseEntity
                     .status(
-                            HttpStatus.INTERNAL_SERVER_ERROR
+                            HttpStatus.BAD_REQUEST
                     )
                     .body(error);
         }
@@ -195,9 +390,8 @@ public class UserController {
     // =========================================
 
     @PostMapping("/login")
-    public ResponseEntity<User> loginUser(
+    public ResponseEntity<?> loginUser(
             @RequestBody User loginRequest) {
-
 
         System.out.println(
                 "LOGIN REQUEST: " +
@@ -212,16 +406,67 @@ public class UserController {
                 );
 
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
 
             return ResponseEntity
-                    .status(401)
-                    .build();
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Invalid email or password, or the account is locked."
+                            )
+                    );
         }
 
 
+        /*
+         * Generate JWT after successful login.
+         */
+
+        String token =
+                userService.generateLoginToken(
+                        user
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Unable to create authentication token."
+                            )
+                    );
+        }
+
+
+        /*
+         * Return safe user information.
+         *
+         * Password is NOT included.
+         */
+
         return ResponseEntity.ok(
-                user
+                createSafeUserResponse(
+                        user,
+                        token
+                )
         );
     }
 
@@ -231,9 +476,8 @@ public class UserController {
     // =========================================
 
     @PostMapping("/google")
-    public ResponseEntity<User> googleLogin(
+    public ResponseEntity<?> googleLogin(
             @RequestBody Map<String, String> request) {
-
 
         String credential =
                 request.get("credential");
@@ -246,7 +490,15 @@ public class UserController {
 
             return ResponseEntity
                     .badRequest()
-                    .build();
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Google credential is required."
+                            )
+                    );
         }
 
 
@@ -256,16 +508,61 @@ public class UserController {
                 );
 
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
 
             return ResponseEntity
-                    .status(401)
-                    .build();
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Google login failed or the account is locked."
+                            )
+                    );
+        }
+
+
+        /*
+         * Generate JWT for Google login too.
+         */
+
+        String token =
+                userService.generateLoginToken(
+                        user
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Unable to create authentication token."
+                            )
+                    );
         }
 
 
         return ResponseEntity.ok(
-                user
+                createSafeUserResponse(
+                        user,
+                        token
+                )
         );
     }
 
@@ -274,10 +571,134 @@ public class UserController {
     // GET ALL USERS
     // =========================================
 
-    @GetMapping
-    public List<User> getAllUsers() {
+    /*
+     * ADMIN ONLY
+     */
 
-        return userService.getAllUsers();
+    @GetMapping
+    public ResponseEntity<?> getAllUsers(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                userService.getAllUsers()
+        );
+    }
+
+
+    // =========================================
+    // GET ACTIVE USERS
+    // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
+
+    @GetMapping("/active")
+    public ResponseEntity<?> getActiveUsers(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                userService.getActiveUsers()
+        );
+    }
+
+
+    // =========================================
+    // GET DELETED USERS
+    // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
+
+    @GetMapping("/deleted")
+    public ResponseEntity<?> getDeletedUsers(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                userService.getDeletedUsers()
+        );
     }
 
 
@@ -285,10 +706,41 @@ public class UserController {
     // UPDATE USER
     // =========================================
 
+    /*
+     * ADMIN ONLY
+     */
+
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(
+    public ResponseEntity<?> updateUser(
             @PathVariable Long id,
-            @RequestBody User updatedUser) {
+            @RequestBody User updatedUser,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
 
 
         User user =
@@ -298,7 +750,9 @@ public class UserController {
                 );
 
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
 
             return ResponseEntity
                     .notFound()
@@ -306,19 +760,55 @@ public class UserController {
         }
 
 
+        /*
+         * Do not return password.
+         */
+
         return ResponseEntity.ok(
-                user
+                createSafeUserResponse(
+                        user,
+                        null
+                )
         );
     }
 
 
     // =========================================
-    // DELETE USER
+    // MOVE USER TO DELETE BIN
     // =========================================
+
+    /*
+     * ADMIN ONLY
+     *
+     * DELETE /api/users/{id}
+     *
+     * This is now a SOFT DELETE.
+     */
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            "Admin authorization required."
+                    );
+        }
 
 
         boolean deleted =
@@ -327,18 +817,136 @@ public class UserController {
                 );
 
 
-        if (!deleted) {
+        if (
+                !deleted
+        ) {
 
             return ResponseEntity
                     .badRequest()
                     .body(
-                            "User cannot be deleted"
+                            "User cannot be deleted or is already in the Delete Bin."
                     );
         }
 
 
         return ResponseEntity.ok(
-                "User deleted successfully"
+                "User moved to Delete Bin successfully. Account is locked."
+        );
+    }
+
+
+    // =========================================
+    // RESTORE USER
+    // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<String> restoreUser(
+            @PathVariable Long id,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            "Admin authorization required."
+                    );
+        }
+
+
+        boolean restored =
+                userService.restoreUser(
+                        id
+                );
+
+
+        if (
+                !restored
+        ) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            "User cannot be restored."
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                "User restored successfully."
+        );
+    }
+
+
+    // =========================================
+    // PERMANENT DELETE
+    // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<String> permanentlyDeleteUser(
+            @PathVariable Long id,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        if (
+                !isAuthorizedAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            "Admin authorization required."
+                    );
+        }
+
+
+        boolean deleted =
+                userService.permanentlyDeleteUser(
+                        id
+                );
+
+
+        if (
+                !deleted
+        ) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            "User cannot be permanently deleted."
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                "User permanently deleted."
         );
     }
 
@@ -383,20 +991,24 @@ public class UserController {
         Map<String, Object> error =
                 new HashMap<>();
 
+
         error.put(
                 "success",
                 false
         );
+
 
         error.put(
                 "message",
                 "Invalid JSON request body."
         );
 
+
         error.put(
                 "errorType",
                 e.getClass().getSimpleName()
         );
+
 
         error.put(
                 "errorDetail",
@@ -414,7 +1026,9 @@ public class UserController {
     // GENERAL CONTROLLER ERROR
     // =========================================
 
-    @ExceptionHandler(Exception.class)
+    @ExceptionHandler(
+            Exception.class
+    )
     public ResponseEntity<Map<String, Object>>
     handleGeneralException(
             Exception e) {
@@ -448,20 +1062,24 @@ public class UserController {
         Map<String, Object> error =
                 new HashMap<>();
 
+
         error.put(
                 "success",
                 false
         );
+
 
         error.put(
                 "message",
                 "Backend request failed."
         );
 
+
         error.put(
                 "errorType",
                 e.getClass().getSimpleName()
         );
+
 
         error.put(
                 "errorDetail",
@@ -475,4 +1093,5 @@ public class UserController {
                 )
                 .body(error);
     }
+
 }

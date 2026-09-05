@@ -1,5 +1,7 @@
 package dairyhub_backend.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -61,6 +63,35 @@ public class User {
 
 
     // =========================================
+    // DELETE BIN / ACCOUNT LOCK
+    // =========================================
+
+    /*
+     * false = active account
+     *
+     * true = account is in Delete Bin and locked
+     *
+     * The email remains reserved while the account
+     * is in the Delete Bin.
+     */
+
+    @Column(
+            nullable = false
+    )
+    private Boolean deleted = false;
+
+
+    /*
+     * Date and time when the account was moved
+     * to the Delete Bin.
+     *
+     * Used for the 30-day retention period.
+     */
+
+    private LocalDateTime deletedAt;
+
+
+    // =========================================
     // EMPTY CONSTRUCTOR
     // =========================================
 
@@ -97,6 +128,10 @@ public class User {
                 adminManaged != null
                         ? adminManaged
                         : false;
+
+        this.deleted = false;
+
+        this.deletedAt = null;
     }
 
 
@@ -209,6 +244,40 @@ public class User {
                 adminManaged != null
                         ? adminManaged
                         : false;
+    }
+
+
+    // =========================================
+    // DELETED
+    // =========================================
+
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+
+    public void setDeleted(Boolean deleted) {
+
+        this.deleted =
+                deleted != null
+                        ? deleted
+                        : false;
+    }
+
+
+    // =========================================
+    // DELETED AT
+    // =========================================
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+
+    public void setDeletedAt(
+            LocalDateTime deletedAt) {
+
+        this.deletedAt = deletedAt;
     }
 
 }

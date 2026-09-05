@@ -1,5 +1,6 @@
 package dairyhub_backend.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +34,21 @@ public class UserService {
             "admin@dairyhub.com";
 
 
+    // =========================================
+    // DELETE BIN RETENTION
+    // =========================================
+
+    private static final long DELETE_BIN_DAYS =
+            30;
+
+
+    // =========================================
+    // SERVICES
+    // =========================================
+
     private final UserRepository userRepository;
+
+    private final JwtService jwtService;
 
     private final TokenVerifier googleTokenVerifier;
 
@@ -43,10 +58,14 @@ public class UserService {
     // =========================================
 
     public UserService(
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            JwtService jwtService) {
 
         this.userRepository =
                 userRepository;
+
+        this.jwtService =
+                jwtService;
 
 
         this.googleTokenVerifier =
@@ -75,9 +94,24 @@ public class UserService {
         }
 
 
-        return PROTECTED_ADMIN_EMAIL.equalsIgnoreCase(
-                user.getEmail()
-        );
+        return PROTECTED_ADMIN_EMAIL
+                .equalsIgnoreCase(
+                        user.getEmail()
+                );
+    }
+
+
+    // =========================================
+    // CHECK DELETED USER
+    // =========================================
+
+    private boolean isDeleted(
+            User user) {
+
+        return user != null
+                && Boolean.TRUE.equals(
+                        user.getDeleted()
+                );
     }
 
 
@@ -88,9 +122,83 @@ public class UserService {
     public User registerUser(
             User user) {
 
-        /*
-         * Nobody can register directly as ADMIN.
-         */
+        if (user == null) {
+
+            throw new RuntimeException(
+                    "User data is required."
+            );
+        }
+
+
+        if (
+                user.getEmail() == null ||
+                user.getEmail()
+                        .trim()
+                        .isEmpty()
+        ) {
+
+            throw new RuntimeException(
+                    "Email is required."
+            );
+        }
+
+
+        String email =
+                user.getEmail()
+                        .trim()
+                        .toLowerCase();
+
+
+        // =====================================
+        // CHECK EXISTING EMAIL
+        // =====================================
+
+        User existingUser =
+                userRepository
+                        .findByEmail(
+                                email
+                        )
+                        .orElse(null);
+
+
+        if (
+                existingUser != null
+        ) {
+
+            // ---------------------------------
+            // DELETED ACCOUNT
+            // ---------------------------------
+
+            if (
+                    isDeleted(
+                            existingUser
+                    )
+            ) {
+
+                throw new RuntimeException(
+                        "This email belongs to a deleted account. Please contact DairyHub support."
+                );
+            }
+
+
+            // ---------------------------------
+            // ACTIVE ACCOUNT
+            // ---------------------------------
+
+            throw new RuntimeException(
+                    "An account with this email already exists."
+            );
+        }
+
+
+        user.setEmail(
+                email
+        );
+
+
+        // =====================================
+        // FORCE CUSTOMER ROLE
+        // =====================================
 
         user.setRole(
                 "CUSTOMER"
@@ -99,6 +207,20 @@ public class UserService {
 
         user.setAdminManaged(
                 false
+        );
+
+
+        // =====================================
+        // NEW ACCOUNT IS ACTIVE
+        // =====================================
+
+        user.setDeleted(
+                false
+        );
+
+
+        user.setDeletedAt(
+                null
         );
 
 
@@ -116,38 +238,117 @@ public class UserService {
             String email,
             String password) {
 
+        if (
+                email == null ||
+                password == null
+        ) {
+
+            return null;
+        }
+
+
+        String normalizedEmail =
+                email
+                        .trim()
+                        .toLowerCase();
+
+
         User user =
                 userRepository
-                        .findByEmail(email)
+                        .findByEmail(
+                                normalizedEmail
+                        )
                         .orElse(null);
 
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
 
             return null;
         }
 
 
-        /*
-         * Google users do not have a
-         * normal password.
-         */
+        // =====================================
+        // DELETED / LOCKED ACCOUNT
+        // =====================================
 
-        if (user.getPassword() == null) {
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
 
             return null;
         }
 
 
-        if (!user.getPassword().equals(
-                password
-        )) {
+        // =====================================
+        // GOOGLE ACCOUNT
+        // =====================================
+
+        if (
+                user.getPassword() == null
+        ) {
+
+            return null;
+        }
+
+
+        // =====================================
+        // CHECK PASSWORD
+        // =====================================
+
+        if (
+                !user.getPassword()
+                        .equals(
+                                password
+                        )
+        ) {
 
             return null;
         }
 
 
         return user;
+    }
+
+
+    // =========================================
+    // GENERATE LOGIN TOKEN
+    // =========================================
+
+    public String generateLoginToken(
+            User user) {
+
+        if (
+                user == null
+        ) {
+
+            return null;
+        }
+
+
+        /*
+         * Never generate a token for an account
+         * currently inside the Delete Bin.
+         */
+
+        if (
+                Boolean.TRUE.equals(
+                        user.getDeleted()
+                )
+        ) {
+
+            return null;
+        }
+
+
+        return jwtService.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole()
+        );
     }
 
 
@@ -166,7 +367,9 @@ public class UserService {
                     );
 
 
-            if (token == null) {
+            if (
+                    token == null
+            ) {
 
                 return null;
             }
@@ -176,7 +379,9 @@ public class UserService {
                     token.getHeader();
 
 
-            if (header == null) {
+            if (
+                    header == null
+            ) {
 
                 return null;
             }
@@ -186,7 +391,9 @@ public class UserService {
                     token.getPayload();
 
 
-            if (payload == null) {
+            if (
+                    payload == null
+            ) {
 
                 return null;
             }
@@ -210,7 +417,9 @@ public class UserService {
                     );
 
 
-            if (emailObject == null) {
+            if (
+                    emailObject == null
+            ) {
 
                 return null;
             }
@@ -223,17 +432,21 @@ public class UserService {
                             .toLowerCase();
 
 
-            if (!email.endsWith(
-                    "@gmail.com"
-            )) {
+            if (
+                    !email.endsWith(
+                            "@gmail.com"
+                    )
+            ) {
 
                 return null;
             }
 
 
-            if (!Boolean.TRUE.equals(
-                    emailVerifiedObject
-            )) {
+            if (
+                    !Boolean.TRUE.equals(
+                            emailVerifiedObject
+                    )
+            ) {
 
                 return null;
             }
@@ -247,15 +460,38 @@ public class UserService {
 
             User existingUser =
                     userRepository
-                            .findByEmail(email)
+                            .findByEmail(
+                                    email
+                            )
                             .orElse(null);
 
 
-            if (existingUser != null) {
+            if (
+                    existingUser != null
+            ) {
+
+                /*
+                 * Deleted Google accounts cannot
+                 * login through Google.
+                 */
+
+                if (
+                        isDeleted(
+                                existingUser
+                        )
+                ) {
+
+                    return null;
+                }
+
 
                 return existingUser;
             }
 
+
+            // =================================
+            // CREATE GOOGLE CUSTOMER
+            // =================================
 
             User newUser =
                     new User();
@@ -291,6 +527,16 @@ public class UserService {
             );
 
 
+            newUser.setDeleted(
+                    false
+            );
+
+
+            newUser.setDeletedAt(
+                    null
+            );
+
+
             return userRepository.save(
                     newUser
             );
@@ -309,7 +555,9 @@ public class UserService {
             return null;
 
 
-        } catch (Exception e) {
+        } catch (
+                Exception e
+        ) {
 
             System.out.println(
                     "Google login error: "
@@ -333,6 +581,36 @@ public class UserService {
 
 
     // =========================================
+    // GET ACTIVE USERS
+    // =========================================
+
+    public List<User> getActiveUsers() {
+
+        return userRepository
+                .findAll()
+                .stream()
+                .filter(
+                        user ->
+                                !isDeleted(
+                                        user
+                                )
+                )
+                .toList();
+    }
+
+
+    // =========================================
+    // GET DELETED USERS
+    // =========================================
+
+    public List<User> getDeletedUsers() {
+
+        return userRepository
+                .findByDeletedTrue();
+    }
+
+
+    // =========================================
     // UPDATE USER
     // =========================================
 
@@ -341,10 +619,14 @@ public class UserService {
             User updatedUser) {
 
         Optional<User> optionalUser =
-                userRepository.findById(id);
+                userRepository.findById(
+                        id
+                );
 
 
-        if (optionalUser.isEmpty()) {
+        if (
+                optionalUser.isEmpty()
+        ) {
 
             return null;
         }
@@ -352,6 +634,20 @@ public class UserService {
 
         User user =
                 optionalUser.get();
+
+
+        // =====================================
+        // DELETED USERS CANNOT BE EDITED
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return null;
+        }
 
 
         // =====================================
@@ -392,11 +688,13 @@ public class UserService {
 
 
             // ---------------------------------
-            // ORIGINAL PROTECTED ADMIN
+            // PROTECTED ADMIN
             // ---------------------------------
 
             if (
-                    isProtectedAdmin(user)
+                    isProtectedAdmin(
+                            user
+                    )
             ) {
 
                 user.setRole(
@@ -456,7 +754,7 @@ public class UserService {
 
 
     // =========================================
-    // DELETE USER
+    // MOVE USER TO DELETE BIN
     // =========================================
 
     public boolean deleteUser(
@@ -464,36 +762,278 @@ public class UserService {
 
         User user =
                 userRepository
-                        .findById(id)
+                        .findById(
+                                id
+                        )
                         .orElse(null);
 
 
-        if (user == null) {
-
-            return false;
-        }
-
-
-        /*
-         * ONLY admin@dairyhub.com is protected.
-         *
-         * Other ADMIN accounts can be deleted.
-         */
-
         if (
-                isProtectedAdmin(user)
+                user == null
         ) {
 
             return false;
         }
 
 
-        userRepository.deleteById(
-                id
+        // =====================================
+        // PROTECTED ADMIN
+        // =====================================
+
+        if (
+                isProtectedAdmin(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // ALREADY DELETED
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // SOFT DELETE
+        // =====================================
+
+        user.setDeleted(
+                true
+        );
+
+
+        user.setDeletedAt(
+                LocalDateTime.now()
+        );
+
+
+        userRepository.save(
+                user
         );
 
 
         return true;
+    }
+
+
+    // =========================================
+    // RESTORE USER
+    // =========================================
+
+    public boolean restoreUser(
+            Long id) {
+
+        User user =
+                userRepository
+                        .findById(
+                                id
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // MUST BE DELETED
+        // =====================================
+
+        if (
+                !isDeleted(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        user.setDeleted(
+                false
+        );
+
+
+        user.setDeletedAt(
+                null
+        );
+
+
+        userRepository.save(
+                user
+        );
+
+
+        return true;
+    }
+
+
+    // =========================================
+    // PERMANENT DELETE
+    // =========================================
+
+    public boolean permanentlyDeleteUser(
+            Long id) {
+
+        User user =
+                userRepository
+                        .findById(
+                                id
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // PROTECTED ADMIN
+        // =====================================
+
+        if (
+                isProtectedAdmin(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // ONLY DELETE USERS IN BIN
+        // =====================================
+
+        if (
+                !isDeleted(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        userRepository.delete(
+                user
+        );
+
+
+        return true;
+    }
+
+
+    // =========================================
+    // PERMANENT DELETE AFTER 30 DAYS
+    // =========================================
+
+    public int permanentlyDeleteExpiredUsers() {
+
+        List<User> deletedUsers =
+                userRepository
+                        .findByDeletedTrue();
+
+
+        if (
+                deletedUsers.isEmpty()
+        ) {
+
+            return 0;
+        }
+
+
+        LocalDateTime expiryTime =
+                LocalDateTime.now()
+                        .minusDays(
+                                DELETE_BIN_DAYS
+                        );
+
+
+        int deletedCount =
+                0;
+
+
+        for (
+                User user :
+                deletedUsers
+        ) {
+
+            // ---------------------------------
+            // NEVER DELETE PROTECTED ADMIN
+            // ---------------------------------
+
+            if (
+                    isProtectedAdmin(
+                            user
+                    )
+            ) {
+
+                continue;
+            }
+
+
+            LocalDateTime deletedAt =
+                    user.getDeletedAt();
+
+
+            /*
+             * If deletedAt is missing,
+             * leave the account untouched.
+             */
+
+            if (
+                    deletedAt == null
+            ) {
+
+                continue;
+            }
+
+
+            // ---------------------------------
+            // EXPIRED
+            // ---------------------------------
+
+            if (
+                    deletedAt.isBefore(
+                            expiryTime
+                    )
+                    ||
+                    deletedAt.isEqual(
+                            expiryTime
+                    )
+            ) {
+
+                userRepository.delete(
+                        user
+                );
+
+
+                deletedCount++;
+            }
+        }
+
+
+        return deletedCount;
     }
 
 }
