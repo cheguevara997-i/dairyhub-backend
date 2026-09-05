@@ -61,14 +61,14 @@ public class Product {
 
 
     // =========================================
-    // IMAGE
+    // PRODUCT IMAGE
     // =========================================
 
     private String image;
 
 
     // =========================================
-    // DESCRIPTION
+    // PRODUCT DESCRIPTION
     // =========================================
 
     private String description;
@@ -90,7 +90,7 @@ public class Product {
 
 
     // =========================================
-    // CONSTRUCTOR
+    // FULL CONSTRUCTOR
     // =========================================
 
     public Product(
@@ -267,4 +267,5 @@ public class Product {
         this.stock =
                 stock;
     }
+
 }
