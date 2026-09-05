@@ -42,20 +42,6 @@ public class Product {
     // PRODUCT SIZE / QUANTITY
     // =========================================
 
-    /*
-     * Examples:
-     *
-     * 1 L
-     * 500 ml
-     * 250 ml
-     * 1 kg
-     * 500 g
-     * 200 g
-     *
-     * This represents the quantity contained
-     * in one product unit.
-     */
-
     @Column(name = "size")
     private String size;
 
@@ -82,6 +68,33 @@ public class Product {
 
 
     // =========================================
+    // PRODUCT AVAILABILITY
+    // =========================================
+
+    /*
+     * true  = product is available for sale
+     * false = product is manually unavailable
+     *
+     * IMPORTANT:
+     *
+     * Stock and availability are separate.
+     *
+     * Example:
+     *
+     * stock = 25
+     * available = false
+     *
+     * Product physically has 25 units,
+     * but customers cannot purchase it.
+     */
+
+    @Column(
+            nullable = false
+    )
+    private Boolean available = true;
+
+
+    // =========================================
     // EMPTY CONSTRUCTOR
     // =========================================
 
@@ -100,7 +113,8 @@ public class Product {
             String size,
             String image,
             String description,
-            Integer stock) {
+            Integer stock,
+            Boolean available) {
 
         this.name =
                 name;
@@ -122,6 +136,11 @@ public class Product {
 
         this.stock =
                 stock;
+
+        this.available =
+                available != null
+                        ? available
+                        : true;
     }
 
 
@@ -266,6 +285,26 @@ public class Product {
 
         this.stock =
                 stock;
+    }
+
+
+    // =========================================
+    // AVAILABLE
+    // =========================================
+
+    public Boolean getAvailable() {
+
+        return available;
+    }
+
+
+    public void setAvailable(
+            Boolean available) {
+
+        this.available =
+                available != null
+                        ? available
+                        : true;
     }
 
 }

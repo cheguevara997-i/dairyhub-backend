@@ -2,6 +2,7 @@ package dairyhub_backend.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,38 +26,118 @@ public class ProductController {
 
     private final ProductService productService;
 
-    public ProductController(ProductService productService) {
-        this.productService = productService;
+
+    public ProductController(
+            ProductService productService) {
+
+        this.productService =
+                productService;
     }
+
+
+    // =========================================
+    // GET ALL PRODUCTS
+    // =========================================
 
     @GetMapping
     public List<Product> getAllProducts() {
+
         return productService.getAllProducts();
     }
 
+
+    // =========================================
+    // GET PRODUCT BY ID
+    // =========================================
+
     @GetMapping("/{id}")
-    public Product getProductById(@PathVariable Long id) {
-        return productService.getProductById(id);
+    public Product getProductById(
+            @PathVariable Long id) {
+
+        return productService.getProductById(
+                id
+        );
     }
 
+
+    // =========================================
+    // ADD PRODUCT
+    // =========================================
+
     @PostMapping
-    public Product addProduct(@RequestBody Product product) {
-        return productService.addProduct(product);
+    public Product addProduct(
+            @RequestBody Product product) {
+
+        return productService.addProduct(
+                product
+        );
     }
+
+
+    // =========================================
+    // UPDATE PRODUCT
+    // =========================================
 
     @PutMapping("/{id}")
     public Product updateProduct(
             @PathVariable Long id,
             @RequestBody Product product) {
 
-        return productService.updateProduct(id, product);
+        return productService.updateProduct(
+                id,
+                product
+        );
     }
 
-    @DeleteMapping("/{id}")
-    public String deleteProduct(@PathVariable Long id) {
 
-        productService.deleteProduct(id);
+    // =========================================
+    // MARK AVAILABLE / OUT OF STOCK
+    // =========================================
+
+    @PutMapping("/{id}/availability")
+    public ResponseEntity<Product> setAvailability(
+            @PathVariable Long id,
+            @RequestBody AvailabilityRequest request) {
+
+        Product updatedProduct =
+                productService.setAvailability(
+                        id,
+                        Boolean.TRUE.equals(
+                                request.available()
+                        )
+                );
+
+
+        return ResponseEntity.ok(
+                updatedProduct
+        );
+    }
+
+
+    // =========================================
+    // DELETE PRODUCT
+    // =========================================
+
+    @DeleteMapping("/{id}")
+    public String deleteProduct(
+            @PathVariable Long id) {
+
+        productService.deleteProduct(
+                id
+        );
+
 
         return "Product deleted successfully";
     }
+
+
+    // =========================================
+    // AVAILABILITY REQUEST
+    // =========================================
+
+    public record AvailabilityRequest(
+            Boolean available
+    ) {
+    }
+
 }

@@ -12,44 +12,213 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
-    public ProductService(ProductRepository productRepository) {
-        this.productRepository = productRepository;
+
+    public ProductService(
+            ProductRepository productRepository) {
+
+        this.productRepository =
+                productRepository;
     }
 
-    // Get all products
+
+    // =========================================
+    // GET ALL PRODUCTS
+    // =========================================
+
     public List<Product> getAllProducts() {
+
         return productRepository.findAll();
     }
 
-    // Get product by ID
-    public Product getProductById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Product not found"));
+
+    // =========================================
+    // GET PRODUCT BY ID
+    // =========================================
+
+    public Product getProductById(
+            Long id) {
+
+        return productRepository.findById(
+                id
+        )
+        .orElseThrow(
+                () ->
+                        new RuntimeException(
+                                "Product not found"
+                        )
+        );
     }
 
-    // Add product
-    public Product addProduct(Product product) {
-        return productRepository.save(product);
+
+    // =========================================
+    // ADD PRODUCT
+    // =========================================
+
+    public Product addProduct(
+            Product product) {
+
+        /*
+         * New products are available by default.
+         *
+         * If the frontend doesn't send available,
+         * treat it as true.
+         */
+
+        if (
+                product.getAvailable() == null
+        ) {
+
+            product.setAvailable(
+                    true
+            );
+        }
+
+
+        return productRepository.save(
+                product
+        );
     }
 
-    // Update product
-    public Product updateProduct(Long id, Product product) {
 
-        Product existingProduct = getProductById(id);
+    // =========================================
+    // UPDATE PRODUCT
+    // =========================================
 
-        existingProduct.setName(product.getName());
-        existingProduct.setCategory(product.getCategory());
-        existingProduct.setPrice(product.getPrice());
-        existingProduct.setStock(product.getStock());
-        existingProduct.setDescription(product.getDescription());
-        existingProduct.setImage(product.getImage());
+    public Product updateProduct(
+            Long id,
+            Product product) {
 
-        return productRepository.save(existingProduct);
+        Product existingProduct =
+                getProductById(
+                        id
+                );
+
+
+        // =====================================
+        // NAME
+        // =====================================
+
+        existingProduct.setName(
+                product.getName()
+        );
+
+
+        // =====================================
+        // CATEGORY
+        // =====================================
+
+        existingProduct.setCategory(
+                product.getCategory()
+        );
+
+
+        // =====================================
+        // PRICE
+        // =====================================
+
+        existingProduct.setPrice(
+                product.getPrice()
+        );
+
+
+        // =====================================
+        // SIZE
+        // =====================================
+
+        existingProduct.setSize(
+                product.getSize()
+        );
+
+
+        // =====================================
+        // STOCK
+        // =====================================
+
+        existingProduct.setStock(
+                product.getStock()
+        );
+
+
+        // =====================================
+        // DESCRIPTION
+        // =====================================
+
+        existingProduct.setDescription(
+                product.getDescription()
+        );
+
+
+        // =====================================
+        // IMAGE
+        // =====================================
+
+        existingProduct.setImage(
+                product.getImage()
+        );
+
+
+        // =====================================
+        // AVAILABILITY
+        // =====================================
+
+        /*
+         * If available is omitted during an old-style
+         * update request, keep the existing value.
+         *
+         * This prevents an accidental reset.
+         */
+
+        if (
+                product.getAvailable() != null
+        ) {
+
+            existingProduct.setAvailable(
+                    product.getAvailable()
+            );
+        }
+
+
+        return productRepository.save(
+                existingProduct
+        );
     }
 
-    // Delete product
-    public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+
+    // =========================================
+    // MARK AVAILABLE / UNAVAILABLE
+    // =========================================
+
+    public Product setAvailability(
+            Long id,
+            boolean available) {
+
+        Product product =
+                getProductById(
+                        id
+                );
+
+
+        product.setAvailable(
+                available
+        );
+
+
+        return productRepository.save(
+                product
+        );
     }
+
+
+    // =========================================
+    // DELETE PRODUCT
+    // =========================================
+
+    public void deleteProduct(
+            Long id) {
+
+        productRepository.deleteById(
+                id
+        );
+    }
+
 }

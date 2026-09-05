@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -71,6 +72,42 @@ public class CustomerOrder {
 
 
     // =========================================
+    // CUSTOMER ORDER EXPERIENCE FEEDBACK
+    // =========================================
+
+    /*
+     * This feedback belongs to the ORDER.
+     *
+     * It is NOT a product review.
+     *
+     * DELIVERED:
+     * Product review is handled by Review.
+     *
+     * CANCELLED:
+     * Customer can rate the order/service
+     * experience and provide cancellation feedback.
+     */
+
+    @Column(
+            name = "experience_rating"
+    )
+    private Integer experienceRating;
+
+
+    @Column(
+            name = "experience_feedback",
+            length = 1000
+    )
+    private String experienceFeedback;
+
+
+    @Column(
+            name = "experience_feedback_at"
+    )
+    private LocalDateTime experienceFeedbackAt;
+
+
+    // =========================================
     // ORDER ITEMS
     // =========================================
 
@@ -98,14 +135,24 @@ public class CustomerOrder {
     @PrePersist
     public void createOrderDate() {
 
-        orderDate = LocalDateTime.now();
+        if (orderDate == null) {
 
-        if (status == null) {
-            status = "ORDER_PLACED";
+            orderDate =
+                    LocalDateTime.now();
         }
 
+
+        if (status == null) {
+
+            status =
+                    "ORDER_PLACED";
+        }
+
+
         if (paymentStatus == null) {
-            paymentStatus = "PENDING";
+
+            paymentStatus =
+                    "PENDING";
         }
 
     }
@@ -116,11 +163,16 @@ public class CustomerOrder {
     // =========================================
 
     public Long getId() {
+
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+
+    public void setId(
+            Long id) {
+
+        this.id =
+                id;
     }
 
 
@@ -129,13 +181,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getCustomerName() {
+
         return customerName;
     }
+
 
     public void setCustomerName(
             String customerName) {
 
-        this.customerName = customerName;
+        this.customerName =
+                customerName;
     }
 
 
@@ -144,13 +199,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getCustomerEmail() {
+
         return customerEmail;
     }
+
 
     public void setCustomerEmail(
             String customerEmail) {
 
-        this.customerEmail = customerEmail;
+        this.customerEmail =
+                customerEmail;
     }
 
 
@@ -159,11 +217,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getPhone() {
+
         return phone;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+
+    public void setPhone(
+            String phone) {
+
+        this.phone =
+                phone;
     }
 
 
@@ -172,11 +235,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getAddress() {
+
         return address;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+
+    public void setAddress(
+            String address) {
+
+        this.address =
+                address;
     }
 
 
@@ -185,11 +253,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getCity() {
+
         return city;
     }
 
-    public void setCity(String city) {
-        this.city = city;
+
+    public void setCity(
+            String city) {
+
+        this.city =
+                city;
     }
 
 
@@ -198,11 +271,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getState() {
+
         return state;
     }
 
-    public void setState(String state) {
-        this.state = state;
+
+    public void setState(
+            String state) {
+
+        this.state =
+                state;
     }
 
 
@@ -211,11 +289,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getPincode() {
+
         return pincode;
     }
 
-    public void setPincode(String pincode) {
-        this.pincode = pincode;
+
+    public void setPincode(
+            String pincode) {
+
+        this.pincode =
+                pincode;
     }
 
 
@@ -224,13 +307,16 @@ public class CustomerOrder {
     // =========================================
 
     public Double getTotalAmount() {
+
         return totalAmount;
     }
+
 
     public void setTotalAmount(
             Double totalAmount) {
 
-        this.totalAmount = totalAmount;
+        this.totalAmount =
+                totalAmount;
     }
 
 
@@ -239,11 +325,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getStatus() {
+
         return status;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+
+    public void setStatus(
+            String status) {
+
+        this.status =
+                status;
     }
 
 
@@ -252,13 +343,16 @@ public class CustomerOrder {
     // =========================================
 
     public LocalDateTime getOrderDate() {
+
         return orderDate;
     }
+
 
     public void setOrderDate(
             LocalDateTime orderDate) {
 
-        this.orderDate = orderDate;
+        this.orderDate =
+                orderDate;
     }
 
 
@@ -267,13 +361,16 @@ public class CustomerOrder {
     // =========================================
 
     public String getPaymentStatus() {
+
         return paymentStatus;
     }
+
 
     public void setPaymentStatus(
             String paymentStatus) {
 
-        this.paymentStatus = paymentStatus;
+        this.paymentStatus =
+                paymentStatus;
     }
 
 
@@ -282,8 +379,10 @@ public class CustomerOrder {
     // =========================================
 
     public String getRazorpayOrderId() {
+
         return razorpayOrderId;
     }
+
 
     public void setRazorpayOrderId(
             String razorpayOrderId) {
@@ -298,8 +397,10 @@ public class CustomerOrder {
     // =========================================
 
     public String getRazorpayPaymentId() {
+
         return razorpayPaymentId;
     }
+
 
     public void setRazorpayPaymentId(
             String razorpayPaymentId) {
@@ -314,8 +415,10 @@ public class CustomerOrder {
     // =========================================
 
     public String getRazorpaySignature() {
+
         return razorpaySignature;
     }
+
 
     public void setRazorpaySignature(
             String razorpaySignature) {
@@ -326,17 +429,74 @@ public class CustomerOrder {
 
 
     // =========================================
+    // EXPERIENCE RATING
+    // =========================================
+
+    public Integer getExperienceRating() {
+
+        return experienceRating;
+    }
+
+
+    public void setExperienceRating(
+            Integer experienceRating) {
+
+        this.experienceRating =
+                experienceRating;
+    }
+
+
+    // =========================================
+    // EXPERIENCE FEEDBACK
+    // =========================================
+
+    public String getExperienceFeedback() {
+
+        return experienceFeedback;
+    }
+
+
+    public void setExperienceFeedback(
+            String experienceFeedback) {
+
+        this.experienceFeedback =
+                experienceFeedback;
+    }
+
+
+    // =========================================
+    // EXPERIENCE FEEDBACK DATE
+    // =========================================
+
+    public LocalDateTime getExperienceFeedbackAt() {
+
+        return experienceFeedbackAt;
+    }
+
+
+    public void setExperienceFeedbackAt(
+            LocalDateTime experienceFeedbackAt) {
+
+        this.experienceFeedbackAt =
+                experienceFeedbackAt;
+    }
+
+
+    // =========================================
     // ORDER ITEMS
     // =========================================
 
     public List<OrderItem> getItems() {
+
         return items;
     }
+
 
     public void setItems(
             List<OrderItem> items) {
 
-        this.items = items;
+        this.items =
+                items;
     }
 
 
@@ -344,11 +504,16 @@ public class CustomerOrder {
     // ADD ORDER ITEM
     // =========================================
 
-    public void addItem(OrderItem item) {
+    public void addItem(
+            OrderItem item) {
 
-        items.add(item);
+        items.add(
+                item
+        );
 
-        item.setOrder(this);
+        item.setOrder(
+                this
+        );
     }
 
 
@@ -356,11 +521,16 @@ public class CustomerOrder {
     // REMOVE ORDER ITEM
     // =========================================
 
-    public void removeItem(OrderItem item) {
+    public void removeItem(
+            OrderItem item) {
 
-        items.remove(item);
+        items.remove(
+                item
+        );
 
-        item.setOrder(null);
+        item.setOrder(
+                null
+        );
     }
 
 }

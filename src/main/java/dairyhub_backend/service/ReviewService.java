@@ -10,15 +10,20 @@ import org.springframework.stereotype.Service;
 
 import dairyhub_backend.entity.CustomerOrder;
 import dairyhub_backend.entity.OrderItem;
+import dairyhub_backend.entity.Product;
 import dairyhub_backend.entity.Review;
 import dairyhub_backend.repository.OrderRepository;
+import dairyhub_backend.repository.ProductRepository;
 import dairyhub_backend.repository.ReviewRepository;
 
 @Service
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
+
     private final OrderRepository orderRepository;
+
+    private final ProductRepository productRepository;
 
 
     // =====================================================
@@ -27,10 +32,195 @@ public class ReviewService {
 
     public ReviewService(
             ReviewRepository reviewRepository,
-            OrderRepository orderRepository) {
+            OrderRepository orderRepository,
+            ProductRepository productRepository) {
 
-        this.reviewRepository = reviewRepository;
-        this.orderRepository = orderRepository;
+        this.reviewRepository =
+                reviewRepository;
+
+        this.orderRepository =
+                orderRepository;
+
+        this.productRepository =
+                productRepository;
+    }
+
+
+    // =====================================================
+    // NORMALIZE EMAIL
+    // =====================================================
+
+    private String normalizeEmail(
+            String email) {
+
+        if (
+                email == null ||
+                email.trim().isEmpty()
+        ) {
+
+            return null;
+        }
+
+
+        return email
+                .trim()
+                .toLowerCase();
+    }
+
+
+    // =====================================================
+    // VALIDATE RATING
+    // =====================================================
+
+    private void validateRating(
+            Integer rating) {
+
+        if (
+                rating == null ||
+                rating < 1 ||
+                rating > 5
+        ) {
+
+            throw new RuntimeException(
+                    "Rating must be between 1 and 5."
+            );
+        }
+    }
+
+
+    // =====================================================
+    // VALIDATE COMMENT
+    // =====================================================
+
+    private String validateComment(
+            String comment) {
+
+        if (
+                comment == null ||
+                comment.trim().isEmpty()
+        ) {
+
+            throw new RuntimeException(
+                    "Review comment is required."
+            );
+        }
+
+
+        String cleanedComment =
+                comment.trim();
+
+
+        if (
+                cleanedComment.length() > 1000
+        ) {
+
+            throw new RuntimeException(
+                    "Review comment cannot exceed 1000 characters."
+            );
+        }
+
+
+        return cleanedComment;
+    }
+
+
+    // =====================================================
+    // CHECK PURCHASE STATUS
+    // =====================================================
+
+    private Map<String, Boolean>
+    checkPurchaseStatus(
+            Long productId,
+            String userEmail) {
+
+        boolean purchased =
+                false;
+
+        boolean delivered =
+                false;
+
+
+        List<CustomerOrder> orders =
+                orderRepository
+                        .findByCustomerEmail(
+                                userEmail
+                        );
+
+
+        for (
+                CustomerOrder order :
+                orders
+        ) {
+
+            if (
+                    order.getItems() == null
+            ) {
+
+                continue;
+            }
+
+
+            for (
+                    OrderItem item :
+                    order.getItems()
+            ) {
+
+                if (
+                        item.getProductId() != null
+                        &&
+                        item.getProductId()
+                                .equals(productId)
+                ) {
+
+                    purchased =
+                            true;
+
+
+                    if (
+                            "DELIVERED"
+                                    .equalsIgnoreCase(
+                                            order.getStatus()
+                                    )
+                    ) {
+
+                        delivered =
+                                true;
+                    }
+
+
+                    break;
+                }
+
+            }
+
+
+            if (
+                    delivered
+            ) {
+
+                break;
+            }
+
+        }
+
+
+        Map<String, Boolean> result =
+                new HashMap<>();
+
+
+        result.put(
+                "purchased",
+                purchased
+        );
+
+
+        result.put(
+                "delivered",
+                delivered
+        );
+
+
+        return result;
     }
 
 
@@ -47,10 +237,12 @@ public class ReviewService {
             String comment) {
 
         // ---------------------------------------------
-        // BASIC VALIDATION
+        // PRODUCT ID
         // ---------------------------------------------
 
-        if (productId == null) {
+        if (
+                productId == null
+        ) {
 
             throw new RuntimeException(
                     "Product ID is required."
@@ -58,8 +250,19 @@ public class ReviewService {
         }
 
 
-        if (userEmail == null
-                || userEmail.trim().isEmpty()) {
+        // ---------------------------------------------
+        // EMAIL
+        // ---------------------------------------------
+
+        String normalizedEmail =
+                normalizeEmail(
+                        userEmail
+                );
+
+
+        if (
+                normalizedEmail == null
+        ) {
 
             throw new RuntimeException(
                     "User email is required."
@@ -67,8 +270,14 @@ public class ReviewService {
         }
 
 
-        if (userName == null
-                || userName.trim().isEmpty()) {
+        // ---------------------------------------------
+        // USER NAME
+        // ---------------------------------------------
+
+        if (
+                userName == null ||
+                userName.trim().isEmpty()
+        ) {
 
             throw new RuntimeException(
                     "User name is required."
@@ -76,38 +285,40 @@ public class ReviewService {
         }
 
 
-        if (rating == null
-                || rating < 1
-                || rating > 5) {
+        // ---------------------------------------------
+        // RATING
+        // ---------------------------------------------
 
-            throw new RuntimeException(
-                    "Rating must be between 1 and 5."
-            );
-        }
-
-
-        if (comment == null
-                || comment.trim().isEmpty()) {
-
-            throw new RuntimeException(
-                    "Review comment is required."
-            );
-        }
+        validateRating(
+                rating
+        );
 
 
         // ---------------------------------------------
-        // CHECK DUPLICATE REVIEW
+        // COMMENT
+        // ---------------------------------------------
+
+        String cleanedComment =
+                validateComment(
+                        comment
+                );
+
+
+        // ---------------------------------------------
+        // DUPLICATE REVIEW CHECK
         // ---------------------------------------------
 
         Optional<Review> existingReview =
                 reviewRepository
                         .findByProductIdAndUserEmail(
                                 productId,
-                                userEmail.trim()
+                                normalizedEmail
                         );
 
 
-        if (existingReview.isPresent()) {
+        if (
+                existingReview.isPresent()
+        ) {
 
             throw new RuntimeException(
                     "You have already reviewed this product."
@@ -116,54 +327,57 @@ public class ReviewService {
 
 
         // ---------------------------------------------
-        // CHECK PURCHASE / DELIVERY STATUS
+        // PURCHASE / DELIVERY CHECK
         // ---------------------------------------------
 
-        boolean purchased = false;
-
-        boolean delivered = false;
-
-
-        List<CustomerOrder> customerOrders =
-                orderRepository
-                        .findByCustomerEmail(
-                                userEmail.trim()
-                        );
+        Map<String, Boolean> purchaseStatus =
+                checkPurchaseStatus(
+                        productId,
+                        normalizedEmail
+                );
 
 
-        for (CustomerOrder order :
-                customerOrders) {
-
-            if (order.getItems() == null) {
-                continue;
-            }
-
-
-            for (OrderItem item :
-                    order.getItems()) {
-
-                if (item.getProductId() != null
-                        && item.getProductId()
-                                .equals(productId)) {
-
-                    purchased = true;
+        boolean purchased =
+                Boolean.TRUE.equals(
+                        purchaseStatus.get(
+                                "purchased"
+                        )
+                );
 
 
-                    if ("DELIVERED".equalsIgnoreCase(
-                            order.getStatus())) {
-
-                        delivered = true;
-                    }
-
-
-                    break;
-                }
-            }
+        boolean delivered =
+                Boolean.TRUE.equals(
+                        purchaseStatus.get(
+                                "delivered"
+                        )
+                );
 
 
-            if (delivered) {
-                break;
-            }
+        // ---------------------------------------------
+        // MUST HAVE PURCHASED
+        // ---------------------------------------------
+
+        if (
+                !purchased
+        ) {
+
+            throw new RuntimeException(
+                    "You can review this product only after purchasing it."
+            );
+        }
+
+
+        // ---------------------------------------------
+        // MUST BE DELIVERED
+        // ---------------------------------------------
+
+        if (
+                !delivered
+        ) {
+
+            throw new RuntimeException(
+                    "You can review this product after your order has been delivered."
+            );
         }
 
 
@@ -171,7 +385,8 @@ public class ReviewService {
         // CREATE REVIEW
         // ---------------------------------------------
 
-        Review review = new Review();
+        Review review =
+                new Review();
 
 
         review.setProductId(
@@ -180,12 +395,14 @@ public class ReviewService {
 
 
         review.setProductName(
-                productName
+                productName != null
+                        ? productName.trim()
+                        : ""
         );
 
 
         review.setUserEmail(
-                userEmail.trim()
+                normalizedEmail
         );
 
 
@@ -200,25 +417,13 @@ public class ReviewService {
 
 
         review.setComment(
-                comment.trim()
+                cleanedComment
         );
 
 
-        // ---------------------------------------------
-        // VERIFIED PURCHASE
-        // ---------------------------------------------
-        /*
-         * Customer can review even without purchase.
-         *
-         * Delivered purchase:
-         * verifiedPurchase = true
-         *
-         * Otherwise:
-         * verifiedPurchase = false
-         */
-
+        // Delivered purchase = verified
         review.setVerifiedPurchase(
-                purchased && delivered
+                true
         );
 
 
@@ -226,10 +431,6 @@ public class ReviewService {
                 LocalDateTime.now()
         );
 
-
-        // ---------------------------------------------
-        // SAVE REVIEW
-        // ---------------------------------------------
 
         return reviewRepository.save(
                 review
@@ -243,6 +444,14 @@ public class ReviewService {
 
     public List<Review> getProductReviews(
             Long productId) {
+
+        if (
+                productId == null
+        ) {
+
+            return List.of();
+        }
+
 
         return reviewRepository
                 .findByProductIdOrderByCreatedAtDesc(
@@ -258,6 +467,14 @@ public class ReviewService {
     public Double getAverageRating(
             Long productId) {
 
+        if (
+                productId == null
+        ) {
+
+            return 0.0;
+        }
+
+
         List<Review> reviews =
                 reviewRepository
                         .findByProductIdOrderByCreatedAtDesc(
@@ -265,37 +482,56 @@ public class ReviewService {
                         );
 
 
-        if (reviews.isEmpty()) {
+        if (
+                reviews.isEmpty()
+        ) {
 
             return 0.0;
         }
 
 
-        double total = 0;
+        double total =
+                0.0;
 
-        int validRatings = 0;
+        int validRatings =
+                0;
 
 
-        for (Review review :
-                reviews) {
+        for (
+                Review review :
+                reviews
+        ) {
 
-            if (review.getRating() != null) {
+            Integer reviewRating =
+                    review.getRating();
 
-                total += review.getRating();
+
+            if (
+                    reviewRating != null &&
+                    reviewRating >= 1 &&
+                    reviewRating <= 5
+            ) {
+
+                total +=
+                        reviewRating;
 
                 validRatings++;
             }
+
         }
 
 
-        if (validRatings == 0) {
+        if (
+                validRatings == 0
+        ) {
 
             return 0.0;
         }
 
 
         double average =
-                total / validRatings;
+                total /
+                validRatings;
 
 
         return Math.round(
@@ -311,6 +547,14 @@ public class ReviewService {
     public long getReviewCount(
             Long productId) {
 
+        if (
+                productId == null
+        ) {
+
+            return 0;
+        }
+
+
         return reviewRepository
                 .countByProductId(
                         productId
@@ -322,7 +566,8 @@ public class ReviewService {
     // CHECK REVIEW ELIGIBILITY
     // =====================================================
 
-    public Map<String, Object> getReviewEligibility(
+    public Map<String, Object>
+    getReviewEligibility(
             Long productId,
             String userEmail) {
 
@@ -334,8 +579,15 @@ public class ReviewService {
         // LOGIN REQUIRED
         // ---------------------------------------------
 
-        if (userEmail == null
-                || userEmail.trim().isEmpty()) {
+        String normalizedEmail =
+                normalizeEmail(
+                        userEmail
+                );
+
+
+        if (
+                normalizedEmail == null
+        ) {
 
             result.put(
                     "canReview",
@@ -365,12 +617,8 @@ public class ReviewService {
         }
 
 
-        String normalizedEmail =
-                userEmail.trim();
-
-
         // ---------------------------------------------
-        // CHECK EXISTING REVIEW
+        // ALREADY REVIEWED
         // ---------------------------------------------
 
         Optional<Review> existingReview =
@@ -381,7 +629,9 @@ public class ReviewService {
                         );
 
 
-        if (existingReview.isPresent()) {
+        if (
+                existingReview.isPresent()
+        ) {
 
             Review review =
                     existingReview.get();
@@ -401,13 +651,13 @@ public class ReviewService {
 
             result.put(
                     "purchased",
-                    false
+                    true
             );
 
 
             result.put(
                     "delivered",
-                    false
+                    true
             );
 
 
@@ -422,67 +672,107 @@ public class ReviewService {
 
 
         // ---------------------------------------------
-        // CHECK ORDERS
+        // PURCHASE STATUS
         // ---------------------------------------------
 
-        boolean purchased = false;
-
-        boolean delivered = false;
-
-
-        List<CustomerOrder> customerOrders =
-                orderRepository
-                        .findByCustomerEmail(
-                                normalizedEmail
-                        );
+        Map<String, Boolean> purchaseStatus =
+                checkPurchaseStatus(
+                        productId,
+                        normalizedEmail
+                );
 
 
-        for (CustomerOrder order :
-                customerOrders) {
-
-            if (order.getItems() == null) {
-                continue;
-            }
-
-
-            for (OrderItem item :
-                    order.getItems()) {
-
-                if (item.getProductId() != null
-                        && item.getProductId()
-                                .equals(productId)) {
-
-                    purchased = true;
+        boolean purchased =
+                Boolean.TRUE.equals(
+                        purchaseStatus.get(
+                                "purchased"
+                        )
+                );
 
 
-                    if ("DELIVERED".equalsIgnoreCase(
-                            order.getStatus())) {
-
-                        delivered = true;
-                    }
-
-
-                    break;
-                }
-            }
+        boolean delivered =
+                Boolean.TRUE.equals(
+                        purchaseStatus.get(
+                                "delivered"
+                        )
+                );
 
 
-            if (delivered) {
-                break;
-            }
+        // ---------------------------------------------
+        // NOT PURCHASED
+        // ---------------------------------------------
+
+        if (
+                !purchased
+        ) {
+
+            result.put(
+                    "canReview",
+                    false
+            );
+
+
+            result.put(
+                    "reason",
+                    "PURCHASE_REQUIRED"
+            );
+
+
+            result.put(
+                    "purchased",
+                    false
+            );
+
+
+            result.put(
+                    "delivered",
+                    false
+            );
+
+
+            return result;
         }
 
 
         // ---------------------------------------------
-        // CUSTOMER CAN REVIEW
+        // PURCHASED BUT NOT DELIVERED
         // ---------------------------------------------
-        /*
-         * Logged-in customers can review
-         * even when they have not purchased.
-         *
-         * Delivered customers get
-         * verifiedPurchase = true.
-         */
+
+        if (
+                !delivered
+        ) {
+
+            result.put(
+                    "canReview",
+                    false
+            );
+
+
+            result.put(
+                    "reason",
+                    "DELIVERY_REQUIRED"
+            );
+
+
+            result.put(
+                    "purchased",
+                    true
+            );
+
+
+            result.put(
+                    "delivered",
+                    false
+            );
+
+
+            return result;
+        }
+
+
+        // ---------------------------------------------
+        // DELIVERED
+        // ---------------------------------------------
 
         result.put(
                 "canReview",
@@ -491,38 +781,21 @@ public class ReviewService {
 
 
         result.put(
+                "reason",
+                "VERIFIED_ELIGIBLE"
+        );
+
+
+        result.put(
                 "purchased",
-                purchased
+                true
         );
 
 
         result.put(
                 "delivered",
-                delivered
+                true
         );
-
-
-        if (delivered) {
-
-            result.put(
-                    "reason",
-                    "VERIFIED_ELIGIBLE"
-            );
-
-        } else if (purchased) {
-
-            result.put(
-                    "reason",
-                    "PURCHASED_NOT_DELIVERED"
-            );
-
-        } else {
-
-            result.put(
-                    "reason",
-                    "GENERAL_REVIEW"
-            );
-        }
 
 
         return result;
@@ -539,12 +812,15 @@ public class ReviewService {
             Integer rating,
             String comment) {
 
-        // ---------------------------------------------
-        // USER EMAIL CHECK
-        // ---------------------------------------------
+        String normalizedEmail =
+                normalizeEmail(
+                        userEmail
+                );
 
-        if (userEmail == null
-                || userEmail.trim().isEmpty()) {
+
+        if (
+                normalizedEmail == null
+        ) {
 
             throw new RuntimeException(
                     "User email is required."
@@ -552,36 +828,16 @@ public class ReviewService {
         }
 
 
-        // ---------------------------------------------
-        // RATING CHECK
-        // ---------------------------------------------
-
-        if (rating == null
-                || rating < 1
-                || rating > 5) {
-
-            throw new RuntimeException(
-                    "Rating must be between 1 and 5."
-            );
-        }
+        validateRating(
+                rating
+        );
 
 
-        // ---------------------------------------------
-        // COMMENT CHECK
-        // ---------------------------------------------
+        String cleanedComment =
+                validateComment(
+                        comment
+                );
 
-        if (comment == null
-                || comment.trim().isEmpty()) {
-
-            throw new RuntimeException(
-                    "Review comment is required."
-            );
-        }
-
-
-        // ---------------------------------------------
-        // FIND REVIEW
-        // ---------------------------------------------
 
         Optional<Review> optionalReview =
                 reviewRepository.findById(
@@ -589,7 +845,9 @@ public class ReviewService {
                 );
 
 
-        if (optionalReview.isEmpty()) {
+        if (
+                optionalReview.isEmpty()
+        ) {
 
             throw new RuntimeException(
                     "Review not found."
@@ -601,15 +859,18 @@ public class ReviewService {
                 optionalReview.get();
 
 
-        // ---------------------------------------------
-        // OWNERSHIP CHECK
-        // ---------------------------------------------
+        String reviewEmail =
+                normalizeEmail(
+                        review.getUserEmail()
+                );
 
-        if (review.getUserEmail() == null
-                || !review.getUserEmail()
-                        .equalsIgnoreCase(
-                                userEmail.trim()
-                        )) {
+
+        if (
+                reviewEmail == null ||
+                !reviewEmail.equals(
+                        normalizedEmail
+                )
+        ) {
 
             throw new RuntimeException(
                     "You can edit only your own review."
@@ -617,23 +878,15 @@ public class ReviewService {
         }
 
 
-        // ---------------------------------------------
-        // UPDATE REVIEW
-        // ---------------------------------------------
-
         review.setRating(
                 rating
         );
 
 
         review.setComment(
-                comment.trim()
+                cleanedComment
         );
 
-
-        // ---------------------------------------------
-        // SAVE
-        // ---------------------------------------------
 
         return reviewRepository.save(
                 review
@@ -649,12 +902,15 @@ public class ReviewService {
             Long reviewId,
             String userEmail) {
 
-        // ---------------------------------------------
-        // USER EMAIL CHECK
-        // ---------------------------------------------
+        String normalizedEmail =
+                normalizeEmail(
+                        userEmail
+                );
 
-        if (userEmail == null
-                || userEmail.trim().isEmpty()) {
+
+        if (
+                normalizedEmail == null
+        ) {
 
             throw new RuntimeException(
                     "User email is required."
@@ -662,17 +918,15 @@ public class ReviewService {
         }
 
 
-        // ---------------------------------------------
-        // FIND REVIEW
-        // ---------------------------------------------
-
         Optional<Review> optionalReview =
                 reviewRepository.findById(
                         reviewId
                 );
 
 
-        if (optionalReview.isEmpty()) {
+        if (
+                optionalReview.isEmpty()
+        ) {
 
             return false;
         }
@@ -682,15 +936,18 @@ public class ReviewService {
                 optionalReview.get();
 
 
-        // ---------------------------------------------
-        // OWNERSHIP CHECK
-        // ---------------------------------------------
+        String reviewEmail =
+                normalizeEmail(
+                        review.getUserEmail()
+                );
 
-        if (review.getUserEmail() == null
-                || !review.getUserEmail()
-                        .equalsIgnoreCase(
-                                userEmail.trim()
-                        )) {
+
+        if (
+                reviewEmail == null ||
+                !reviewEmail.equals(
+                        normalizedEmail
+                )
+        ) {
 
             throw new RuntimeException(
                     "You can delete only your own review."
@@ -698,12 +955,8 @@ public class ReviewService {
         }
 
 
-        // ---------------------------------------------
-        // DELETE REVIEW
-        // ---------------------------------------------
-
-        reviewRepository.deleteById(
-                reviewId
+        reviewRepository.delete(
+                review
         );
 
 
@@ -731,8 +984,19 @@ public class ReviewService {
     public boolean deleteReview(
             Long id) {
 
-        if (!reviewRepository.existsById(
-                id)) {
+        if (
+                id == null
+        ) {
+
+            return false;
+        }
+
+
+        if (
+                !reviewRepository.existsById(
+                        id
+                )
+        ) {
 
             return false;
         }
@@ -745,4 +1009,348 @@ public class ReviewService {
 
         return true;
     }
+
+
+    // =====================================================
+    // GET TOP RATED PRODUCTS
+    // =====================================================
+
+    public List<Map<String, Object>>
+    getTopRatedProducts() {
+
+        List<Product> products =
+                productRepository.findAll();
+
+
+        List<Review> reviews =
+                reviewRepository.findAll();
+
+
+        if (
+                products.isEmpty() ||
+                reviews.isEmpty()
+        ) {
+
+            return List.of();
+        }
+
+
+        Map<Long, Product> productMap =
+                new HashMap<>();
+
+
+        for (
+                Product product :
+                products
+        ) {
+
+            if (
+                    product.getId() != null
+            ) {
+
+                productMap.put(
+                        product.getId(),
+                        product
+                );
+
+            }
+
+        }
+
+
+        class RatingGroup {
+
+            String name;
+
+            String category;
+
+            double totalRating;
+
+            long reviewCount;
+
+            List<Product> variants =
+                    new java.util.ArrayList<>();
+
+        }
+
+
+        Map<String, RatingGroup> groups =
+                new HashMap<>();
+
+
+        for (
+                Review review :
+                reviews
+        ) {
+
+            if (
+                    review.getProductId() == null ||
+                    review.getRating() == null ||
+                    review.getRating() < 1 ||
+                    review.getRating() > 5
+            ) {
+
+                continue;
+            }
+
+
+            Product product =
+                    productMap.get(
+                            review.getProductId()
+                    );
+
+
+            if (
+                    product == null
+            ) {
+
+                continue;
+            }
+
+
+            String name =
+                    String.valueOf(
+                            product.getName() == null
+                                    ? ""
+                                    : product.getName()
+                    )
+                    .trim()
+                    .toLowerCase();
+
+
+            String category =
+                    String.valueOf(
+                            product.getCategory() == null
+                                    ? ""
+                                    : product.getCategory()
+                    )
+                    .trim()
+                    .toLowerCase();
+
+
+            String groupKey =
+                    name +
+                    "__" +
+                    category;
+
+
+            RatingGroup group =
+                    groups.get(
+                            groupKey
+                    );
+
+
+            if (
+                    group == null
+            ) {
+
+                group =
+                        new RatingGroup();
+
+
+                group.name =
+                        product.getName();
+
+
+                group.category =
+                        product.getCategory();
+
+
+                groups.put(
+                        groupKey,
+                        group
+                );
+
+            }
+
+
+            group.totalRating +=
+                    review.getRating();
+
+
+            group.reviewCount++;
+
+
+            boolean alreadyAdded =
+                    group.variants
+                            .stream()
+                            .anyMatch(
+                                    variant ->
+                                            variant.getId()
+                                                    .equals(
+                                                            product.getId()
+                                                    )
+                            );
+
+
+            if (
+                    !alreadyAdded
+            ) {
+
+                group.variants.add(
+                        product
+                );
+
+            }
+
+        }
+
+
+        List<Map<String, Object>> result =
+                new java.util.ArrayList<>();
+
+
+        for (
+                RatingGroup group :
+                groups.values()
+        ) {
+
+            if (
+                    group.reviewCount <= 0
+            ) {
+
+                continue;
+            }
+
+
+            double average =
+                    group.totalRating /
+                    group.reviewCount;
+
+
+            average =
+                    Math.round(
+                            average * 10.0
+                    ) / 10.0;
+
+
+            group.variants.sort(
+                    (a, b) -> {
+
+                        String aSize =
+                                a.getSize() == null
+                                        ? ""
+                                        : a.getSize();
+
+
+                        String bSize =
+                                b.getSize() == null
+                                        ? ""
+                                        : b.getSize();
+
+
+                        return aSize.compareToIgnoreCase(
+                                bSize
+                        );
+
+                    }
+            );
+
+
+            Map<String, Object> item =
+                    new HashMap<>();
+
+
+            item.put(
+                    "name",
+                    group.name
+            );
+
+
+            item.put(
+                    "category",
+                    group.category
+            );
+
+
+            item.put(
+                    "averageRating",
+                    average
+            );
+
+
+            item.put(
+                    "reviewCount",
+                    group.reviewCount
+            );
+
+
+            item.put(
+                    "variants",
+                    group.variants
+            );
+
+
+            result.add(
+                    item
+            );
+
+        }
+
+
+        result.sort(
+                (a, b) -> {
+
+                    double ratingA =
+                            ((Number)
+                                    a.get(
+                                            "averageRating"
+                                    ))
+                                    .doubleValue();
+
+
+                    double ratingB =
+                            ((Number)
+                                    b.get(
+                                            "averageRating"
+                                    ))
+                                    .doubleValue();
+
+
+                    int comparison =
+                            Double.compare(
+                                    ratingB,
+                                    ratingA
+                            );
+
+
+                    if (
+                            comparison != 0
+                    ) {
+
+                        return comparison;
+                    }
+
+
+                    long countA =
+                            ((Number)
+                                    a.get(
+                                            "reviewCount"
+                                    ))
+                                    .longValue();
+
+
+                    long countB =
+                            ((Number)
+                                    b.get(
+                                            "reviewCount"
+                                    ))
+                                    .longValue();
+
+
+                    return Long.compare(
+                            countB,
+                            countA
+                    );
+
+                }
+        );
+
+
+        return result
+                .stream()
+                .limit(6)
+                .toList();
+    }
+
 }

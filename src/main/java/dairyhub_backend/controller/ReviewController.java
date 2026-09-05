@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,12 +13,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dairyhub_backend.entity.Review;
+import dairyhub_backend.service.JwtService;
 import dairyhub_backend.service.ReviewService;
+
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -27,15 +31,178 @@ import dairyhub_backend.service.ReviewService;
 })
 public class ReviewController {
 
+
     private final ReviewService reviewService;
+
+    private final JwtService jwtService;
 
 
     // =====================================================
     // CONSTRUCTOR
     // =====================================================
 
-    public ReviewController(ReviewService reviewService) {
-        this.reviewService = reviewService;
+    public ReviewController(
+            ReviewService reviewService,
+            JwtService jwtService) {
+
+        this.reviewService =
+                reviewService;
+
+        this.jwtService =
+                jwtService;
+    }
+
+
+    // =====================================================
+    // EXTRACT BEARER TOKEN
+    // =====================================================
+
+    private String extractToken(
+            String authorizationHeader) {
+
+        if (
+                authorizationHeader == null ||
+                authorizationHeader.trim().isEmpty()
+        ) {
+
+            return null;
+        }
+
+
+        if (
+                !authorizationHeader
+                        .startsWith("Bearer ")
+        ) {
+
+            return null;
+        }
+
+
+        String token =
+                authorizationHeader
+                        .substring(7)
+                        .trim();
+
+
+        if (
+                token.isEmpty()
+        ) {
+
+            return null;
+        }
+
+
+        return token;
+    }
+
+
+    // =====================================================
+    // CHECK VALID TOKEN
+    // =====================================================
+
+    private boolean isAuthenticated(
+            String authorizationHeader) {
+
+        String token =
+                extractToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return false;
+        }
+
+
+        return jwtService.isValidToken(
+                token
+        );
+    }
+
+
+    // =====================================================
+    // GET EMAIL FROM TOKEN
+    // =====================================================
+
+    private String getEmailFromToken(
+            String authorizationHeader) {
+
+        String token =
+                extractToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return null;
+        }
+
+
+        try {
+
+            String email =
+                    jwtService
+                            .getClaims(token)
+                            .get(
+                                    "email",
+                                    String.class
+                            );
+
+
+            if (
+                    email == null ||
+                    email.trim().isEmpty()
+            ) {
+
+                return null;
+            }
+
+
+            return email
+                    .trim()
+                    .toLowerCase();
+
+
+        } catch (Exception e) {
+
+            return null;
+        }
+    }
+
+
+    // =====================================================
+    // CHECK ADMIN
+    // =====================================================
+
+    private boolean isAdmin(
+            String authorizationHeader) {
+
+        String token =
+                extractToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return false;
+        }
+
+
+        return jwtService.isValidToken(
+                token
+        ) &&
+        jwtService.isAdmin(
+                token
+        );
     }
 
 
@@ -45,45 +212,164 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<?> addReview(
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
 
         try {
 
-            Long productId =
-                    Long.valueOf(
-                            request.get("productId").toString()
+            // ---------------------------------------------
+            // AUTHENTICATION
+            // ---------------------------------------------
+
+            if (
+                    !isAuthenticated(
+                            authorizationHeader
+                    )
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Please login before submitting a review."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // GET EMAIL FROM JWT
+            // ---------------------------------------------
+
+            String userEmail =
+                    getEmailFromToken(
+                            authorizationHeader
                     );
 
 
+            if (
+                    userEmail == null
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Unable to identify the logged-in user."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // PRODUCT ID
+            // ---------------------------------------------
+
+            if (
+                    request.get("productId") == null
+            ) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "Product ID is required."
+                        );
+            }
+
+
+            Long productId =
+                    Long.valueOf(
+                            request
+                                    .get("productId")
+                                    .toString()
+                    );
+
+
+            // ---------------------------------------------
+            // PRODUCT NAME
+            // ---------------------------------------------
+
             String productName =
                     request.get("productName") != null
-                            ? request.get("productName").toString()
+
+                            ? request
+                                    .get("productName")
+                                    .toString()
+
                             : "";
 
 
-            String userEmail =
-                    request.get("userEmail") != null
-                            ? request.get("userEmail").toString()
-                            : "";
-
+            // ---------------------------------------------
+            // USER NAME
+            // ---------------------------------------------
 
             String userName =
                     request.get("userName") != null
-                            ? request.get("userName").toString()
+
+                            ? request
+                                    .get("userName")
+                                    .toString()
+
                             : "";
+
+
+            // ---------------------------------------------
+            // RATING
+            // ---------------------------------------------
+
+            if (
+                    request.get("rating") == null
+            ) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "Rating is required."
+                        );
+            }
 
 
             Integer rating =
                     Integer.valueOf(
-                            request.get("rating").toString()
+                            request
+                                    .get("rating")
+                                    .toString()
                     );
 
 
+            // ---------------------------------------------
+            // COMMENT
+            // ---------------------------------------------
+
             String comment =
                     request.get("comment") != null
-                            ? request.get("comment").toString()
+
+                            ? request
+                                    .get("comment")
+                                    .toString()
+
                             : "";
 
+
+            // ---------------------------------------------
+            // SAVE REVIEW
+            // ---------------------------------------------
 
             Review review =
                     reviewService.addReview(
@@ -96,17 +382,28 @@ public class ReviewController {
                     );
 
 
-            return ResponseEntity.ok(review);
+            return ResponseEntity.ok(
+                    review
+            );
 
 
-        } catch (RuntimeException e) {
+        } catch (
+                RuntimeException e
+        ) {
 
             return ResponseEntity
                     .badRequest()
-                    .body(e.getMessage());
+                    .body(
+                            e.getMessage()
+                    );
 
 
-        } catch (Exception e) {
+        } catch (
+                Exception e
+        ) {
+
+            e.printStackTrace();
+
 
             return ResponseEntity
                     .badRequest()
@@ -119,10 +416,12 @@ public class ReviewController {
 
     // =====================================================
     // GET PRODUCT REVIEWS
+    // PUBLIC
     // =====================================================
 
     @GetMapping("/product/{productId}")
-    public ResponseEntity<List<Review>> getProductReviews(
+    public ResponseEntity<List<Review>>
+    getProductReviews(
             @PathVariable Long productId) {
 
         return ResponseEntity.ok(
@@ -135,10 +434,12 @@ public class ReviewController {
 
     // =====================================================
     // GET PRODUCT RATING SUMMARY
+    // PUBLIC
     // =====================================================
 
     @GetMapping("/product/{productId}/summary")
-    public ResponseEntity<Map<String, Object>> getRatingSummary(
+    public ResponseEntity<Map<String, Object>>
+    getRatingSummary(
             @PathVariable Long productId) {
 
         Double averageRating =
@@ -169,19 +470,119 @@ public class ReviewController {
         );
 
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                response
+        );
+    }
+
+
+    // =====================================================
+    // GET TOP RATED PRODUCTS
+    // PUBLIC
+    // =====================================================
+
+    @GetMapping("/top-rated")
+    public ResponseEntity<List<Map<String, Object>>>
+    getTopRatedProducts() {
+
+        return ResponseEntity.ok(
+                reviewService.getTopRatedProducts()
+        );
     }
 
 
     // =====================================================
     // CHECK REVIEW ELIGIBILITY
+    // AUTHENTICATED CUSTOMER
     // =====================================================
 
     @GetMapping("/product/{productId}/eligibility")
-    public ResponseEntity<Map<String, Object>>
-    checkReviewEligibility(
+    public ResponseEntity<?> checkReviewEligibility(
             @PathVariable Long productId,
-            @RequestParam String userEmail) {
+
+            @RequestParam(
+                    required = false
+            )
+            String ignoredUserEmail,
+
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+        /*
+         * IMPORTANT:
+         *
+         * The userEmail query parameter is intentionally
+         * ignored.
+         *
+         * The backend identifies the customer from
+         * the JWT token instead.
+         */
+
+        if (
+                !isAuthenticated(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "canReview",
+                                    false,
+
+                                    "reason",
+                                    "LOGIN_REQUIRED",
+
+                                    "purchased",
+                                    false,
+
+                                    "delivered",
+                                    false,
+
+                                    "message",
+                                    "Please login before checking review eligibility."
+                            )
+                    );
+        }
+
+
+        String userEmail =
+                getEmailFromToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                userEmail == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "canReview",
+                                    false,
+
+                                    "reason",
+                                    "INVALID_SESSION",
+
+                                    "purchased",
+                                    false,
+
+                                    "delivered",
+                                    false
+                            )
+                    );
+        }
+
 
         return ResponseEntity.ok(
                 reviewService.getReviewEligibility(
@@ -199,27 +600,114 @@ public class ReviewController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateReview(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> request) {
+
+            @RequestBody Map<String, Object> request,
+
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
 
         try {
 
+            // ---------------------------------------------
+            // AUTHENTICATION
+            // ---------------------------------------------
+
+            if (
+                    !isAuthenticated(
+                            authorizationHeader
+                    )
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Please login before editing your review."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // GET EMAIL FROM JWT
+            // ---------------------------------------------
+
             String userEmail =
-                    request.get("userEmail") != null
-                            ? request.get("userEmail").toString()
-                            : "";
+                    getEmailFromToken(
+                            authorizationHeader
+                    );
+
+
+            if (
+                    userEmail == null
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Unable to identify the logged-in user."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // RATING
+            // ---------------------------------------------
+
+            if (
+                    request.get("rating") == null
+            ) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "Rating is required."
+                        );
+            }
 
 
             Integer rating =
                     Integer.valueOf(
-                            request.get("rating").toString()
+                            request
+                                    .get("rating")
+                                    .toString()
                     );
 
 
+            // ---------------------------------------------
+            // COMMENT
+            // ---------------------------------------------
+
             String comment =
                     request.get("comment") != null
-                            ? request.get("comment").toString()
+
+                            ? request
+                                    .get("comment")
+                                    .toString()
+
                             : "";
 
+
+            // ---------------------------------------------
+            // UPDATE REVIEW
+            // ---------------------------------------------
 
             Review review =
                     reviewService.updateReview(
@@ -230,17 +718,28 @@ public class ReviewController {
                     );
 
 
-            return ResponseEntity.ok(review);
+            return ResponseEntity.ok(
+                    review
+            );
 
 
-        } catch (RuntimeException e) {
+        } catch (
+                RuntimeException e
+        ) {
 
             return ResponseEntity
                     .badRequest()
-                    .body(e.getMessage());
+                    .body(
+                            e.getMessage()
+                    );
 
 
-        } catch (Exception e) {
+        } catch (
+                Exception e
+        ) {
+
+            e.printStackTrace();
+
 
             return ResponseEntity
                     .badRequest()
@@ -253,11 +752,38 @@ public class ReviewController {
 
     // =====================================================
     // GET ALL REVIEWS
-    // ADMIN
+    // ADMIN ONLY
     // =====================================================
 
     @GetMapping
-    public ResponseEntity<List<Review>> getAllReviews() {
+    public ResponseEntity<?> getAllReviews(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+        if (
+                !isAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
+
 
         return ResponseEntity.ok(
                 reviewService.getAllReviews()
@@ -267,18 +793,50 @@ public class ReviewController {
 
     // =====================================================
     // DELETE REVIEW
-    // ADMIN
+    // ADMIN ONLY
     // =====================================================
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteReview(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+        if (
+                !isAdmin(
+                        authorizationHeader
+                )
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Admin authorization required."
+                            )
+                    );
+        }
+
 
         boolean deleted =
-                reviewService.deleteReview(id);
+                reviewService.deleteReview(
+                        id
+                );
 
 
-        if (!deleted) {
+        if (
+                !deleted
+        ) {
 
             return ResponseEntity
                     .notFound()
@@ -299,9 +857,79 @@ public class ReviewController {
     @DeleteMapping("/{id}/user")
     public ResponseEntity<?> deleteOwnReview(
             @PathVariable Long id,
-            @RequestParam String userEmail) {
+
+            @RequestParam(
+                    required = false
+            )
+            String ignoredUserEmail,
+
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
 
         try {
+
+            // ---------------------------------------------
+            // AUTHENTICATION
+            // ---------------------------------------------
+
+            if (
+                    !isAuthenticated(
+                            authorizationHeader
+                    )
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Please login before deleting your review."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // GET EMAIL FROM JWT
+            // ---------------------------------------------
+
+            String userEmail =
+                    getEmailFromToken(
+                            authorizationHeader
+                    );
+
+
+            if (
+                    userEmail == null
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.UNAUTHORIZED
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Unable to identify the logged-in user."
+                                )
+                        );
+            }
+
+
+            // ---------------------------------------------
+            // DELETE OWN REVIEW
+            // ---------------------------------------------
 
             boolean deleted =
                     reviewService.deleteOwnReview(
@@ -310,7 +938,9 @@ public class ReviewController {
                     );
 
 
-            if (!deleted) {
+            if (
+                    !deleted
+            ) {
 
                 return ResponseEntity
                         .notFound()
@@ -323,11 +953,16 @@ public class ReviewController {
             );
 
 
-        } catch (RuntimeException e) {
+        } catch (
+                RuntimeException e
+        ) {
 
             return ResponseEntity
                     .badRequest()
-                    .body(e.getMessage());
+                    .body(
+                            e.getMessage()
+                    );
         }
     }
+
 }
