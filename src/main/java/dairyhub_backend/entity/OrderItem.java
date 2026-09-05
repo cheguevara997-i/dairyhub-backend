@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+
 @Entity
 @Table(name = "order_items")
 public class OrderItem {
@@ -34,9 +35,39 @@ public class OrderItem {
 
     private String productName;
 
+    /*
+     * Size of one product unit.
+     *
+     * Examples:
+     *
+     * 180 ml
+     * 500 ml
+     * 1 L
+     * 100 g
+     * 500 g
+     * 1 kg
+     */
+
+    private String size;
+
+
+    /*
+     * Number of units purchased.
+     */
+
     private Integer quantity;
 
+
+    /*
+     * Price of one unit.
+     */
+
     private Double price;
+
+
+    /*
+     * price × quantity
+     */
 
     private Double subtotal;
 
@@ -54,11 +85,16 @@ public class OrderItem {
     // =========================================
 
     public Long getId() {
+
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+
+    public void setId(
+            Long id) {
+
+        this.id =
+                id;
     }
 
 
@@ -67,11 +103,16 @@ public class OrderItem {
     // =========================================
 
     public CustomerOrder getOrder() {
+
         return order;
     }
 
-    public void setOrder(CustomerOrder order) {
-        this.order = order;
+
+    public void setOrder(
+            CustomerOrder order) {
+
+        this.order =
+                order;
     }
 
 
@@ -80,11 +121,16 @@ public class OrderItem {
     // =========================================
 
     public Long getProductId() {
+
         return productId;
     }
 
-    public void setProductId(Long productId) {
-        this.productId = productId;
+
+    public void setProductId(
+            Long productId) {
+
+        this.productId =
+                productId;
     }
 
 
@@ -93,11 +139,34 @@ public class OrderItem {
     // =========================================
 
     public String getProductName() {
+
         return productName;
     }
 
-    public void setProductName(String productName) {
-        this.productName = productName;
+
+    public void setProductName(
+            String productName) {
+
+        this.productName =
+                productName;
+    }
+
+
+    // =========================================
+    // PRODUCT SIZE
+    // =========================================
+
+    public String getSize() {
+
+        return size;
+    }
+
+
+    public void setSize(
+            String size) {
+
+        this.size =
+                size;
     }
 
 
@@ -106,11 +175,16 @@ public class OrderItem {
     // =========================================
 
     public Integer getQuantity() {
+
         return quantity;
     }
 
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
+
+    public void setQuantity(
+            Integer quantity) {
+
+        this.quantity =
+                quantity;
     }
 
 
@@ -119,11 +193,16 @@ public class OrderItem {
     // =========================================
 
     public Double getPrice() {
+
         return price;
     }
 
-    public void setPrice(Double price) {
-        this.price = price;
+
+    public void setPrice(
+            Double price) {
+
+        this.price =
+                price;
     }
 
 
@@ -132,11 +211,16 @@ public class OrderItem {
     // =========================================
 
     public Double getSubtotal() {
+
         return subtotal;
     }
 
-    public void setSubtotal(Double subtotal) {
-        this.subtotal = subtotal;
+
+    public void setSubtotal(
+            Double subtotal) {
+
+        this.subtotal =
+                subtotal;
     }
 
 }
