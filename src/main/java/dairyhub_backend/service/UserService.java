@@ -67,7 +67,6 @@ public class UserService {
         this.jwtService =
                 jwtService;
 
-
         this.googleTokenVerifier =
                 TokenVerifier
                         .newBuilder()
@@ -89,10 +88,8 @@ public class UserService {
             User user) {
 
         if (user == null) {
-
             return false;
         }
-
 
         return PROTECTED_ADMIN_EMAIL
                 .equalsIgnoreCase(
@@ -161,9 +158,7 @@ public class UserService {
                         .orElse(null);
 
 
-        if (
-                existingUser != null
-        ) {
+        if (existingUser != null) {
 
             if (
                     isDeleted(
@@ -499,6 +494,23 @@ public class UserService {
             );
 
 
+            // =================================
+            // GENDER
+            // =================================
+
+            /*
+             * Google login does not provide a
+             * DairyHub profile gender value.
+             *
+             * The customer can add it later
+             * from the Profile page.
+             */
+
+            newUser.setGender(
+                    null
+            );
+
+
             newUser.setRole(
                     "CUSTOMER"
             );
@@ -689,7 +701,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE NAME ONLY
+        // UPDATE NAME
         // =====================================
 
         if (
@@ -733,10 +745,52 @@ public class UserService {
         }
 
 
+        // =====================================
+        // UPDATE GENDER
+        // =====================================
+
+        if (
+                updatedUser.getGender() != null
+        ) {
+
+            String gender =
+                    updatedUser.getGender()
+                            .trim();
+
+
+            if (
+                    !gender.isEmpty()
+            ) {
+
+                user.setGender(
+                        gender
+                );
+
+            } else {
+
+                user.setGender(
+                        null
+                );
+            }
+
+        } else {
+
+            /*
+             * If gender is not included in the
+             * request, keep the existing value.
+             */
+
+            user.setGender(
+                    user.getGender()
+            );
+        }
+
+
         /*
          * IMPORTANT:
          *
-         * We intentionally DO NOT update:
+         * Profile API intentionally does NOT
+         * update:
          *
          * email
          * password
@@ -744,8 +798,6 @@ public class UserService {
          * adminManaged
          * deleted
          * deletedAt
-         *
-         * through the profile API.
          */
 
 
@@ -816,6 +868,20 @@ public class UserService {
         user.setPhone(
                 updatedUser.getPhone()
         );
+
+
+        // =====================================
+        // UPDATE GENDER
+        // =====================================
+
+        if (
+                updatedUser.getGender() != null
+        ) {
+
+            user.setGender(
+                    updatedUser.getGender()
+            );
+        }
 
 
         // =====================================
@@ -921,6 +987,10 @@ public class UserService {
         }
 
 
+        // =====================================
+        // PROTECTED ADMIN
+        // =====================================
+
         if (
                 isProtectedAdmin(
                         user
@@ -931,6 +1001,10 @@ public class UserService {
         }
 
 
+        // =====================================
+        // ALREADY DELETED
+        // =====================================
+
         if (
                 isDeleted(
                         user
@@ -940,6 +1014,10 @@ public class UserService {
             return false;
         }
 
+
+        // =====================================
+        // SOFT DELETE
+        // =====================================
 
         user.setDeleted(
                 true
@@ -982,6 +1060,10 @@ public class UserService {
             return false;
         }
 
+
+        // =====================================
+        // MUST BE DELETED
+        // =====================================
 
         if (
                 !isDeleted(
@@ -1035,6 +1117,10 @@ public class UserService {
         }
 
 
+        // =====================================
+        // PROTECTED ADMIN
+        // =====================================
+
         if (
                 isProtectedAdmin(
                         user
@@ -1044,6 +1130,10 @@ public class UserService {
             return false;
         }
 
+
+        // =====================================
+        // ONLY DELETE USERS IN BIN
+        // =====================================
 
         if (
                 !isDeleted(
@@ -1099,6 +1189,10 @@ public class UserService {
                 deletedUsers
         ) {
 
+            // ---------------------------------
+            // NEVER DELETE PROTECTED ADMIN
+            // ---------------------------------
+
             if (
                     isProtectedAdmin(
                             user
@@ -1113,6 +1207,11 @@ public class UserService {
                     user.getDeletedAt();
 
 
+            /*
+             * If deletedAt is missing,
+             * leave account untouched.
+             */
+
             if (
                     deletedAt == null
             ) {
@@ -1120,6 +1219,10 @@ public class UserService {
                 continue;
             }
 
+
+            // ---------------------------------
+            // EXPIRED
+            // ---------------------------------
 
             if (
                     deletedAt.isBefore(

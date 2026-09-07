@@ -38,6 +38,9 @@ public class User {
     private String phone;
 
 
+    private String gender;
+
+
     private String role;
 
 
@@ -109,6 +112,7 @@ public class User {
             String email,
             String password,
             String phone,
+            String gender,
             String role,
             Boolean adminManaged) {
 
@@ -121,6 +125,8 @@ public class User {
         this.password = password;
 
         this.phone = phone;
+
+        this.gender = gender;
 
         this.role = role;
 
@@ -202,6 +208,20 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+
+    // =========================================
+    // GENDER
+    // =========================================
+
+    public String getGender() {
+        return gender;
+    }
+
+
+    public void setGender(String gender) {
+        this.gender = gender;
     }
 
 

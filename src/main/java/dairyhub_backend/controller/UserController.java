@@ -57,6 +57,17 @@ public class UserController {
     // SAFE USER RESPONSE
     // =========================================
 
+    /*
+     * IMPORTANT:
+     *
+     * Never return the User entity directly
+     * from login/register/profile APIs because
+     * the User entity contains the password field.
+     *
+     * This method returns only the information
+     * that the frontend actually needs.
+     */
+
     private Map<String, Object> createSafeUserResponse(
             User user,
             String token) {
@@ -64,6 +75,10 @@ public class UserController {
         Map<String, Object> response =
                 new HashMap<>();
 
+
+        // =====================================
+        // BASIC USER INFORMATION
+        // =====================================
 
         response.put(
                 "id",
@@ -89,11 +104,29 @@ public class UserController {
         );
 
 
+        // =====================================
+        // GENDER
+        // =====================================
+
+        response.put(
+                "gender",
+                user.getGender()
+        );
+
+
+        // =====================================
+        // ROLE
+        // =====================================
+
         response.put(
                 "role",
                 user.getRole()
         );
 
+
+        // =====================================
+        // ADMIN MANAGEMENT
+        // =====================================
 
         response.put(
                 "adminManaged",
@@ -101,11 +134,24 @@ public class UserController {
         );
 
 
+        // =====================================
+        // DELETE STATUS
+        // =====================================
+
         response.put(
                 "deleted",
                 user.getDeleted()
         );
 
+
+        // =====================================
+        // JWT TOKEN
+        // =====================================
+
+        /*
+         * Token is included only when required,
+         * mainly after login / Google login.
+         */
 
         if (
                 token != null &&
@@ -272,6 +318,11 @@ public class UserController {
         );
 
         System.out.println(
+                "Gender: " +
+                user.getGender()
+        );
+
+        System.out.println(
                 "Role before service: " +
                 user.getRole()
         );
@@ -308,6 +359,10 @@ public class UserController {
                     savedUser.getRole()
             );
 
+
+            /*
+             * Password is not returned.
+             */
 
             return ResponseEntity.ok(
                     createSafeUserResponse(
@@ -424,6 +479,10 @@ public class UserController {
         }
 
 
+        // =====================================
+        // GENERATE JWT
+        // =====================================
+
         String token =
                 userService.generateLoginToken(
                         user
@@ -449,6 +508,10 @@ public class UserController {
                     );
         }
 
+
+        // =====================================
+        // SAFE RESPONSE
+        // =====================================
 
         return ResponseEntity.ok(
                 createSafeUserResponse(
@@ -516,6 +579,10 @@ public class UserController {
         }
 
 
+        // =====================================
+        // GENERATE JWT
+        // =====================================
+
         String token =
                 userService.generateLoginToken(
                         user
@@ -560,8 +627,8 @@ public class UserController {
      *
      * GET /api/users/me
      *
-     * Uses the JWT token to identify the
-     * currently logged-in user.
+     * The JWT identifies the currently
+     * authenticated user.
      */
 
     @GetMapping("/me")
@@ -643,7 +710,11 @@ public class UserController {
      *
      * PUT /api/users/me
      *
-     * Only name and phone can be changed.
+     * Profile currently allows:
+     *
+     * - name
+     * - phone
+     * - gender
      *
      * Email and role cannot be changed here.
      */
@@ -724,6 +795,10 @@ public class UserController {
     // GET ALL USERS
     // =========================================
 
+    /*
+     * ADMIN ONLY
+     */
+
     @GetMapping
     public ResponseEntity<?> getAllUsers(
             @RequestHeader(
@@ -764,6 +839,10 @@ public class UserController {
     // =========================================
     // GET ACTIVE USERS
     // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
 
     @GetMapping("/active")
     public ResponseEntity<?> getActiveUsers(
@@ -806,6 +885,10 @@ public class UserController {
     // GET DELETED USERS
     // =========================================
 
+    /*
+     * ADMIN ONLY
+     */
+
     @GetMapping("/deleted")
     public ResponseEntity<?> getDeletedUsers(
             @RequestHeader(
@@ -846,6 +929,10 @@ public class UserController {
     // =========================================
     // UPDATE USER
     // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(
@@ -910,6 +997,10 @@ public class UserController {
     // MOVE USER TO DELETE BIN
     // =========================================
 
+    /*
+     * ADMIN ONLY
+     */
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(
             @PathVariable Long id,
@@ -964,6 +1055,10 @@ public class UserController {
     // RESTORE USER
     // =========================================
 
+    /*
+     * ADMIN ONLY
+     */
+
     @PostMapping("/{id}/restore")
     public ResponseEntity<String> restoreUser(
             @PathVariable Long id,
@@ -1017,6 +1112,10 @@ public class UserController {
     // =========================================
     // PERMANENT DELETE
     // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
 
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<String> permanentlyDeleteUser(
@@ -1078,6 +1177,9 @@ public class UserController {
     public ResponseEntity<Map<String, Object>>
     handleInvalidRequestBody(
             HttpMessageNotReadableException e) {
+
+
+        e.printStackTrace();
 
 
         Map<String, Object> error =
