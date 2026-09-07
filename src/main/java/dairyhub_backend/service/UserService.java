@@ -43,6 +43,21 @@ public class UserService {
 
 
     // =========================================
+    // PASSWORD RULE
+    // =========================================
+
+    /*
+     * Minimum password length for a new password.
+     *
+     * This does not change your existing login
+     * mechanism.
+     */
+
+    private static final int MIN_PASSWORD_LENGTH =
+            8;
+
+
+    // =========================================
     // SERVICES
     // =========================================
 
@@ -87,9 +102,13 @@ public class UserService {
     private boolean isProtectedAdmin(
             User user) {
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
+
             return false;
         }
+
 
         return PROTECTED_ADMIN_EMAIL
                 .equalsIgnoreCase(
@@ -119,7 +138,9 @@ public class UserService {
     public User registerUser(
             User user) {
 
-        if (user == null) {
+        if (
+                user == null
+        ) {
 
             throw new RuntimeException(
                     "User data is required."
@@ -158,7 +179,13 @@ public class UserService {
                         .orElse(null);
 
 
-        if (existingUser != null) {
+        if (
+                existingUser != null
+        ) {
+
+            // ---------------------------------
+            // DELETED ACCOUNT
+            // ---------------------------------
 
             if (
                     isDeleted(
@@ -171,6 +198,10 @@ public class UserService {
                 );
             }
 
+
+            // ---------------------------------
+            // ACTIVE ACCOUNT
+            // ---------------------------------
 
             throw new RuntimeException(
                     "An account with this email already exists."
@@ -494,19 +525,32 @@ public class UserService {
             );
 
 
-            // =================================
-            // GENDER
-            // =================================
-
-            /*
-             * Google login does not provide a
-             * DairyHub profile gender value.
-             *
-             * The customer can add it later
-             * from the Profile page.
-             */
-
             newUser.setGender(
+                    null
+            );
+
+
+            newUser.setProfilePhoto(
+                    null
+            );
+
+
+            newUser.setAddress(
+                    null
+            );
+
+
+            newUser.setCity(
+                    null
+            );
+
+
+            newUser.setState(
+                    null
+            );
+
+
+            newUser.setPincode(
                     null
             );
 
@@ -701,7 +745,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE NAME
+        // NAME
         // =====================================
 
         if (
@@ -725,28 +769,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE PHONE
-        // =====================================
-
-        if (
-                updatedUser.getPhone() != null
-        ) {
-
-            user.setPhone(
-                    updatedUser.getPhone()
-                            .trim()
-            );
-
-        } else {
-
-            user.setPhone(
-                    null
-            );
-        }
-
-
-        // =====================================
-        // UPDATE GENDER
+        // GENDER
         // =====================================
 
         if (
@@ -759,38 +782,225 @@ public class UserService {
 
 
             if (
-                    !gender.isEmpty()
+                    gender.isEmpty()
             ) {
 
                 user.setGender(
-                        gender
+                        null
                 );
 
             } else {
 
                 user.setGender(
-                        null
+                        gender
                 );
             }
+        }
 
-        } else {
 
-            /*
-             * If gender is not included in the
-             * request, keep the existing value.
-             */
+        // =====================================
+        // PHONE
+        // =====================================
 
-            user.setGender(
-                    user.getGender()
-            );
+        if (
+                updatedUser.getPhone() != null
+        ) {
+
+            String phone =
+                    updatedUser.getPhone()
+                            .trim();
+
+
+            if (
+                    phone.isEmpty()
+            ) {
+
+                user.setPhone(
+                        null
+                );
+
+            } else {
+
+                user.setPhone(
+                        phone
+                );
+            }
+        }
+
+
+        // =====================================
+        // PROFILE PHOTO
+        // =====================================
+
+        if (
+                updatedUser.getProfilePhoto() != null
+        ) {
+
+            String profilePhoto =
+                    updatedUser
+                            .getProfilePhoto()
+                            .trim();
+
+
+            if (
+                    profilePhoto.isEmpty()
+            ) {
+
+                user.setProfilePhoto(
+                        null
+                );
+
+            } else {
+
+                user.setProfilePhoto(
+                        profilePhoto
+                );
+            }
+        }
+
+
+        // =====================================
+        // ADDRESS
+        // =====================================
+
+        if (
+                updatedUser.getAddress() != null
+        ) {
+
+            String address =
+                    updatedUser
+                            .getAddress()
+                            .trim();
+
+
+            if (
+                    address.isEmpty()
+            ) {
+
+                user.setAddress(
+                        null
+                );
+
+            } else {
+
+                user.setAddress(
+                        address
+                );
+            }
+        }
+
+
+        // =====================================
+        // CITY
+        // =====================================
+
+        if (
+                updatedUser.getCity() != null
+        ) {
+
+            String city =
+                    updatedUser
+                            .getCity()
+                            .trim();
+
+
+            if (
+                    city.isEmpty()
+            ) {
+
+                user.setCity(
+                        null
+                );
+
+            } else {
+
+                user.setCity(
+                        city
+                );
+            }
+        }
+
+
+        // =====================================
+        // STATE
+        // =====================================
+
+        if (
+                updatedUser.getState() != null
+        ) {
+
+            String state =
+                    updatedUser
+                            .getState()
+                            .trim();
+
+
+            if (
+                    state.isEmpty()
+            ) {
+
+                user.setState(
+                        null
+                );
+
+            } else {
+
+                user.setState(
+                        state
+                );
+            }
+        }
+
+
+        // =====================================
+        // PINCODE
+        // =====================================
+
+        if (
+                updatedUser.getPincode() != null
+        ) {
+
+            String pincode =
+                    updatedUser
+                            .getPincode()
+                            .trim();
+
+
+            if (
+                    pincode.isEmpty()
+            ) {
+
+                user.setPincode(
+                        null
+                );
+
+            } else {
+
+                if (
+                        !pincode.matches(
+                                "\\d{6}"
+                        )
+                ) {
+
+                    throw new RuntimeException(
+                            "Pincode must contain exactly 6 digits."
+                    );
+                }
+
+
+                user.setPincode(
+                        pincode
+                );
+            }
         }
 
 
         /*
-         * IMPORTANT:
+         * =====================================
+         * PROTECTED FIELDS
+         * =====================================
          *
-         * Profile API intentionally does NOT
-         * update:
+         * Profile update does not modify:
          *
          * email
          * password
@@ -800,10 +1010,248 @@ public class UserService {
          * deletedAt
          */
 
-
         return userRepository.save(
                 user
         );
+    }
+
+
+    // =========================================
+    // CHANGE PASSWORD
+    // =========================================
+
+    /*
+     * CUSTOMER + ADMIN
+     *
+     * Used by:
+     *
+     * PUT /api/users/me/password
+     *
+     * Existing Google accounts have no password.
+     * They cannot use this endpoint until a
+     * password is established through a separate
+     * account-password flow.
+     */
+
+    public boolean changePassword(
+            Long userId,
+            String currentPassword,
+            String newPassword) {
+
+        if (
+                userId == null ||
+                currentPassword == null ||
+                newPassword == null
+        ) {
+
+            return false;
+        }
+
+
+        User user =
+                userRepository
+                        .findById(
+                                userId
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // DELETED ACCOUNT
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // GOOGLE ACCOUNT
+        // =====================================
+
+        if (
+                user.getPassword() == null
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // CHECK CURRENT PASSWORD
+        // =====================================
+
+        if (
+                !user.getPassword()
+                        .equals(
+                                currentPassword
+                        )
+        ) {
+
+            return false;
+        }
+
+
+        String trimmedPassword =
+                newPassword.trim();
+
+
+        // =====================================
+        // PASSWORD LENGTH
+        // =====================================
+
+        if (
+                trimmedPassword.length()
+                        < MIN_PASSWORD_LENGTH
+        ) {
+
+            throw new RuntimeException(
+                    "New password must contain at least "
+                            + MIN_PASSWORD_LENGTH
+                            + " characters."
+            );
+        }
+
+
+        // =====================================
+        // NEW PASSWORD MUST BE DIFFERENT
+        // =====================================
+
+        if (
+                user.getPassword()
+                        .equals(
+                                trimmedPassword
+                        )
+        ) {
+
+            throw new RuntimeException(
+                    "New password must be different from your current password."
+            );
+        }
+
+
+        // =====================================
+        // SAVE NEW PASSWORD
+        // =====================================
+
+        /*
+         * Your existing authentication system
+         * currently stores and compares passwords
+         * directly, so this keeps the same behavior.
+         */
+
+        user.setPassword(
+                trimmedPassword
+        );
+
+
+        userRepository.save(
+                user
+        );
+
+
+        return true;
+    }
+
+
+    // =========================================
+    // DELETE CURRENT USER ACCOUNT
+    // =========================================
+
+    /*
+     * CUSTOMER + protected-account protection
+     *
+     * This uses the existing Delete Bin system.
+     */
+
+    public boolean deleteMyAccount(
+            Long userId) {
+
+        if (
+                userId == null
+        ) {
+
+            return false;
+        }
+
+
+        User user =
+                userRepository
+                        .findById(
+                                userId
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // PROTECTED ADMIN
+        // =====================================
+
+        if (
+                isProtectedAdmin(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // ALREADY DELETED
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return false;
+        }
+
+
+        // =====================================
+        // MOVE TO DELETE BIN
+        // =====================================
+
+        user.setDeleted(
+                true
+        );
+
+
+        user.setDeletedAt(
+                LocalDateTime.now()
+        );
+
+
+        userRepository.save(
+                user
+        );
+
+
+        return true;
     }
 
 
@@ -848,7 +1296,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE NAME
+        // NAME
         // =====================================
 
         if (
@@ -862,7 +1310,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE PHONE
+        // PHONE
         // =====================================
 
         user.setPhone(
@@ -871,7 +1319,7 @@ public class UserService {
 
 
         // =====================================
-        // UPDATE GENDER
+        // GENDER
         // =====================================
 
         if (
@@ -880,6 +1328,76 @@ public class UserService {
 
             user.setGender(
                     updatedUser.getGender()
+            );
+        }
+
+
+        // =====================================
+        // PROFILE PHOTO
+        // =====================================
+
+        if (
+                updatedUser.getProfilePhoto() != null
+        ) {
+
+            user.setProfilePhoto(
+                    updatedUser.getProfilePhoto()
+            );
+        }
+
+
+        // =====================================
+        // ADDRESS
+        // =====================================
+
+        if (
+                updatedUser.getAddress() != null
+        ) {
+
+            user.setAddress(
+                    updatedUser.getAddress()
+            );
+        }
+
+
+        // =====================================
+        // CITY
+        // =====================================
+
+        if (
+                updatedUser.getCity() != null
+        ) {
+
+            user.setCity(
+                    updatedUser.getCity()
+            );
+        }
+
+
+        // =====================================
+        // STATE
+        // =====================================
+
+        if (
+                updatedUser.getState() != null
+        ) {
+
+            user.setState(
+                    updatedUser.getState()
+            );
+        }
+
+
+        // =====================================
+        // PINCODE
+        // =====================================
+
+        if (
+                updatedUser.getPincode() != null
+        ) {
+
+            user.setPincode(
+                    updatedUser.getPincode()
             );
         }
 

@@ -61,11 +61,7 @@ public class UserController {
      * IMPORTANT:
      *
      * Never return the User entity directly
-     * from login/register/profile APIs because
-     * the User entity contains the password field.
-     *
-     * This method returns only the information
-     * that the frontend actually needs.
+     * because it contains the password.
      */
 
     private Map<String, Object> createSafeUserResponse(
@@ -77,7 +73,7 @@ public class UserController {
 
 
         // =====================================
-        // BASIC USER INFORMATION
+        // BASIC INFORMATION
         // =====================================
 
         response.put(
@@ -104,13 +100,47 @@ public class UserController {
         );
 
 
-        // =====================================
-        // GENDER
-        // =====================================
-
         response.put(
                 "gender",
                 user.getGender()
+        );
+
+
+        // =====================================
+        // PROFILE PHOTO
+        // =====================================
+
+        response.put(
+                "profilePhoto",
+                user.getProfilePhoto()
+        );
+
+
+        // =====================================
+        // DELIVERY ADDRESS
+        // =====================================
+
+        response.put(
+                "address",
+                user.getAddress()
+        );
+
+
+        response.put(
+                "city",
+                user.getCity()
+        );
+
+
+        response.put(
+                "state",
+                user.getState()
+        );
+
+
+        response.put(
+                "pincode",
+                user.getPincode()
         );
 
 
@@ -344,25 +374,24 @@ public class UserController {
                     "REGISTRATION SUCCESS"
             );
 
+
             System.out.println(
                     "Saved User ID: " +
                     savedUser.getId()
             );
+
 
             System.out.println(
                     "Saved User Email: " +
                     savedUser.getEmail()
             );
 
+
             System.out.println(
                     "Saved User Role: " +
                     savedUser.getRole()
             );
 
-
-            /*
-             * Password is not returned.
-             */
 
             return ResponseEntity.ok(
                     createSafeUserResponse(
@@ -378,23 +407,28 @@ public class UserController {
                     "========================================="
             );
 
+
             System.err.println(
                     "REGISTRATION ERROR"
             );
+
 
             System.err.println(
                     "Exception Type: " +
                     e.getClass().getName()
             );
 
+
             System.err.println(
                     "Exception Message: " +
                     e.getMessage()
             );
 
+
             System.err.println(
                     "========================================="
             );
+
 
             e.printStackTrace();
 
@@ -626,9 +660,6 @@ public class UserController {
      * CUSTOMER + ADMIN
      *
      * GET /api/users/me
-     *
-     * The JWT identifies the currently
-     * authenticated user.
      */
 
     @GetMapping("/me")
@@ -710,13 +741,25 @@ public class UserController {
      *
      * PUT /api/users/me
      *
-     * Profile currently allows:
+     * Editable profile fields:
      *
-     * - name
-     * - phone
-     * - gender
+     * name
+     * phone
+     * gender
+     * profilePhoto
+     * address
+     * city
+     * state
+     * pincode
      *
-     * Email and role cannot be changed here.
+     * Protected fields:
+     *
+     * email
+     * password
+     * role
+     * adminManaged
+     * deleted
+     * deletedAt
      */
 
     @PutMapping("/me")
@@ -755,20 +798,98 @@ public class UserController {
         }
 
 
-        User user =
-                userService.updateCurrentUser(
-                        userId,
-                        updatedUser
+        try {
+
+            User user =
+                    userService.updateCurrentUser(
+                            userId,
+                            updatedUser
+                    );
+
+
+            if (
+                    user == null
+            ) {
+
+                return ResponseEntity
+                        .status(
+                                HttpStatus.NOT_FOUND
+                        )
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Unable to update profile."
+                                )
+                        );
+            }
+
+
+            return ResponseEntity.ok(
+                    createSafeUserResponse(
+                            user,
+                            null
+                    )
+            );
+
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    e.getMessage() != null
+                                            ? e.getMessage()
+                                            : "Unable to update profile."
+                            )
+                    );
+        }
+    }
+
+
+    // =========================================
+    // CHANGE PASSWORD
+    // =========================================
+
+    /*
+     * CUSTOMER + ADMIN
+     *
+     * PUT /api/users/me/password
+     */
+
+    @PutMapping("/me/password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> request,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        Long userId =
+                getAuthenticatedUserId(
+                        authorizationHeader
                 );
 
 
         if (
-                user == null
+                userId == null
         ) {
 
             return ResponseEntity
                     .status(
-                            HttpStatus.NOT_FOUND
+                            HttpStatus.UNAUTHORIZED
                     )
                     .body(
                             Map.of(
@@ -776,18 +897,210 @@ public class UserController {
                                     false,
 
                                     "message",
-                                    "Unable to update profile."
+                                    "Authentication required."
                             )
                     );
         }
 
 
-        return ResponseEntity.ok(
-                createSafeUserResponse(
-                        user,
-                        null
-                )
-        );
+        String currentPassword =
+                request.get(
+                        "currentPassword"
+                );
+
+
+        String newPassword =
+                request.get(
+                        "newPassword"
+                );
+
+
+        if (
+                currentPassword == null ||
+                currentPassword.isBlank() ||
+                newPassword == null ||
+                newPassword.isBlank()
+        ) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Current password and new password are required."
+                            )
+                    );
+        }
+
+
+        try {
+
+            boolean changed =
+                    userService.changePassword(
+                            userId,
+                            currentPassword,
+                            newPassword
+                    );
+
+
+            if (
+                    !changed
+            ) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "Current password is incorrect or the password could not be changed."
+                                )
+                        );
+            }
+
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "success",
+                            true,
+
+                            "message",
+                            "Password changed successfully."
+                    )
+            );
+
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    e.getMessage() != null
+                                            ? e.getMessage()
+                                            : "Unable to change password."
+                            )
+                    );
+        }
+    }
+
+
+    // =========================================
+    // DELETE MY ACCOUNT
+    // =========================================
+
+    /*
+     * CUSTOMER ONLY / ADMIN ACCOUNT PROTECTED
+     *
+     * DELETE /api/users/me
+     *
+     * Moves the current account into the
+     * existing Delete Bin system.
+     */
+
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        Long userId =
+                getAuthenticatedUserId(
+                        authorizationHeader
+                );
+
+
+        if (
+                userId == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Authentication required."
+                            )
+                    );
+        }
+
+
+        try {
+
+            boolean deleted =
+                    userService.deleteMyAccount(
+                            userId
+                    );
+
+
+            if (
+                    !deleted
+            ) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                Map.of(
+                                        "success",
+                                        false,
+
+                                        "message",
+                                        "This account cannot be deleted."
+                                )
+                        );
+            }
+
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "success",
+                            true,
+
+                            "message",
+                            "Your account has been moved to the Delete Bin."
+                    )
+            );
+
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    e.getMessage() != null
+                                            ? e.getMessage()
+                                            : "Unable to delete your account."
+                            )
+                    );
+        }
     }
 
 
@@ -1178,7 +1491,6 @@ public class UserController {
     handleInvalidRequestBody(
             HttpMessageNotReadableException e) {
 
-
         e.printStackTrace();
 
 
@@ -1226,7 +1538,6 @@ public class UserController {
     public ResponseEntity<Map<String, Object>>
     handleGeneralException(
             Exception e) {
-
 
         e.printStackTrace();
 

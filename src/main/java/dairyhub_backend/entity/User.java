@@ -7,7 +7,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+
 
 @Entity
 @Table(name = "users")
@@ -19,7 +21,7 @@ public class User {
 
 
     // =========================================
-    // USER INFORMATION
+    // PERSONAL INFORMATION
     // =========================================
 
     private String name;
@@ -41,6 +43,45 @@ public class User {
     private String gender;
 
 
+    // =========================================
+    // PROFILE PHOTO
+    // =========================================
+
+    /*
+     * Stores the profile photo as Base64 data.
+     *
+     * It is nullable so existing users are not
+     * forced to have a profile photo.
+     */
+
+    @Lob
+    @Column(
+            name = "profile_photo",
+            columnDefinition = "LONGTEXT"
+    )
+    private String profilePhoto;
+
+
+    // =========================================
+    // DELIVERY ADDRESS
+    // =========================================
+
+    private String address;
+
+
+    private String city;
+
+
+    private String state;
+
+
+    private String pincode;
+
+
+    // =========================================
+    // ROLE
+    // =========================================
+
     private String role;
 
 
@@ -52,10 +93,6 @@ public class User {
      * false = normal customer / protected admin
      *
      * true = customer promoted to ADMIN
-     *
-     * Boolean is used instead of primitive boolean
-     * so login/register JSON is allowed to omit this
-     * property.
      */
 
     @Column(
@@ -72,10 +109,7 @@ public class User {
     /*
      * false = active account
      *
-     * true = account is in Delete Bin and locked
-     *
-     * The email remains reserved while the account
-     * is in the Delete Bin.
+     * true = account is inside Delete Bin
      */
 
     @Column(
@@ -84,12 +118,9 @@ public class User {
     private Boolean deleted = false;
 
 
-    /*
-     * Date and time when the account was moved
-     * to the Delete Bin.
-     *
-     * Used for the 30-day retention period.
-     */
+    // =========================================
+    // DELETE DATE
+    // =========================================
 
     private LocalDateTime deletedAt;
 
@@ -113,31 +144,60 @@ public class User {
             String password,
             String phone,
             String gender,
+            String profilePhoto,
+            String address,
+            String city,
+            String state,
+            String pincode,
             String role,
             Boolean adminManaged) {
 
-        this.id = id;
+        this.id =
+                id;
 
-        this.name = name;
+        this.name =
+                name;
 
-        this.email = email;
+        this.email =
+                email;
 
-        this.password = password;
+        this.password =
+                password;
 
-        this.phone = phone;
+        this.phone =
+                phone;
 
-        this.gender = gender;
+        this.gender =
+                gender;
 
-        this.role = role;
+        this.profilePhoto =
+                profilePhoto;
+
+        this.address =
+                address;
+
+        this.city =
+                city;
+
+        this.state =
+                state;
+
+        this.pincode =
+                pincode;
+
+        this.role =
+                role;
 
         this.adminManaged =
                 adminManaged != null
                         ? adminManaged
                         : false;
 
-        this.deleted = false;
+        this.deleted =
+                false;
 
-        this.deletedAt = null;
+        this.deletedAt =
+                null;
     }
 
 
@@ -151,7 +211,8 @@ public class User {
 
 
     public void setId(Long id) {
-        this.id = id;
+        this.id =
+                id;
     }
 
 
@@ -165,7 +226,8 @@ public class User {
 
 
     public void setName(String name) {
-        this.name = name;
+        this.name =
+                name;
     }
 
 
@@ -179,7 +241,8 @@ public class User {
 
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email =
+                email;
     }
 
 
@@ -193,7 +256,8 @@ public class User {
 
 
     public void setPassword(String password) {
-        this.password = password;
+        this.password =
+                password;
     }
 
 
@@ -207,7 +271,8 @@ public class User {
 
 
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phone =
+                phone;
     }
 
 
@@ -221,7 +286,85 @@ public class User {
 
 
     public void setGender(String gender) {
-        this.gender = gender;
+        this.gender =
+                gender;
+    }
+
+
+    // =========================================
+    // PROFILE PHOTO
+    // =========================================
+
+    public String getProfilePhoto() {
+        return profilePhoto;
+    }
+
+
+    public void setProfilePhoto(
+            String profilePhoto) {
+
+        this.profilePhoto =
+                profilePhoto;
+    }
+
+
+    // =========================================
+    // ADDRESS
+    // =========================================
+
+    public String getAddress() {
+        return address;
+    }
+
+
+    public void setAddress(String address) {
+        this.address =
+                address;
+    }
+
+
+    // =========================================
+    // CITY
+    // =========================================
+
+    public String getCity() {
+        return city;
+    }
+
+
+    public void setCity(String city) {
+        this.city =
+                city;
+    }
+
+
+    // =========================================
+    // STATE
+    // =========================================
+
+    public String getState() {
+        return state;
+    }
+
+
+    public void setState(String state) {
+        this.state =
+                state;
+    }
+
+
+    // =========================================
+    // PINCODE
+    // =========================================
+
+    public String getPincode() {
+        return pincode;
+    }
+
+
+    public void setPincode(String pincode) {
+        this.pincode =
+                pincode;
     }
 
 
@@ -235,7 +378,8 @@ public class User {
 
 
     public void setRole(String role) {
-        this.role = role;
+        this.role =
+                role;
     }
 
 
@@ -247,9 +391,6 @@ public class User {
      * IMPORTANT:
      *
      * Use getAdminManaged(), NOT isAdminManaged().
-     *
-     * This prevents Jackson from interpreting the
-     * property as primitive boolean.
      */
 
     public Boolean getAdminManaged() {
@@ -276,7 +417,8 @@ public class User {
     }
 
 
-    public void setDeleted(Boolean deleted) {
+    public void setDeleted(
+            Boolean deleted) {
 
         this.deleted =
                 deleted != null
@@ -297,7 +439,8 @@ public class User {
     public void setDeletedAt(
             LocalDateTime deletedAt) {
 
-        this.deletedAt = deletedAt;
+        this.deletedAt =
+                deletedAt;
     }
 
 }
