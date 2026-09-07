@@ -1,4 +1,4 @@
-package com.dairyhub.config;
+package dairyhub_backend.config;
 
 import java.util.List;
 
@@ -18,12 +18,20 @@ public class CorsConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {
 
-        CorsConfiguration config = new CorsConfiguration();
+        CorsConfiguration config =
+                new CorsConfiguration();
 
-        // Allow cookies/authorization information
+        // =========================================
+        // ALLOW CREDENTIALS
+        // =========================================
+
         config.setAllowCredentials(true);
 
-        // Frontend applications allowed to call the backend
+
+        // =========================================
+        // ALLOWED FRONTENDS
+        // =========================================
+
         config.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
@@ -31,26 +39,52 @@ public class CorsConfig {
                 )
         );
 
-        // Allow request headers including Authorization
+
+        // =========================================
+        // ALLOWED HEADERS
+        // =========================================
+
         config.setAllowedHeaders(
-                List.of("*")
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "Origin",
+                        "X-Requested-With"
+                )
         );
 
-        // Allow required HTTP methods
+
+        // =========================================
+        // ALLOWED METHODS
+        // =========================================
+
         config.setAllowedMethods(
                 List.of(
                         "GET",
                         "POST",
                         "PUT",
                         "DELETE",
+                        "PATCH",
                         "OPTIONS"
                 )
         );
 
-        // Optional: allow these response headers to be read by frontend
+
+        // =========================================
+        // EXPOSED HEADERS
+        // =========================================
+
         config.setExposedHeaders(
-                List.of("Authorization")
+                List.of(
+                        "Authorization"
+                )
         );
+
+
+        // =========================================
+        // REGISTER CORS FOR ALL ENDPOINTS
+        // =========================================
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -59,6 +93,7 @@ public class CorsConfig {
                 "/**",
                 config
         );
+
 
         return new CorsFilter(source);
     }
