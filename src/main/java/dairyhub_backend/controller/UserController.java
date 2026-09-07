@@ -1,7 +1,6 @@
 package dairyhub_backend.controller;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -58,17 +57,6 @@ public class UserController {
     // SAFE USER RESPONSE
     // =========================================
 
-    /*
-     * IMPORTANT:
-     *
-     * Never return the User entity directly
-     * from login/register APIs because the User
-     * entity contains the password field.
-     *
-     * This method creates a response containing
-     * only information the frontend actually needs.
-     */
-
     private Map<String, Object> createSafeUserResponse(
             User user,
             String token) {
@@ -118,11 +106,6 @@ public class UserController {
                 user.getDeleted()
         );
 
-
-        /*
-         * Token is included for authenticated
-         * frontend requests.
-         */
 
         if (
                 token != null &&
@@ -184,6 +167,43 @@ public class UserController {
 
 
     // =========================================
+    // GET AUTHENTICATED USER ID
+    // =========================================
+
+    private Long getAuthenticatedUserId(
+            String authorizationHeader) {
+
+        String token =
+                extractToken(
+                        authorizationHeader
+                );
+
+
+        if (
+                token == null
+        ) {
+
+            return null;
+        }
+
+
+        if (
+                !jwtService.isValidToken(
+                        token
+                )
+        ) {
+
+            return null;
+        }
+
+
+        return jwtService.getUserId(
+                token
+        );
+    }
+
+
+    // =========================================
     // CHECK ADMIN AUTHORIZATION
     // =========================================
 
@@ -204,11 +224,6 @@ public class UserController {
         }
 
 
-        /*
-         * First verify that the token itself
-         * is valid.
-         */
-
         if (
                 !jwtService.isValidToken(
                         token
@@ -218,11 +233,6 @@ public class UserController {
             return false;
         }
 
-
-        /*
-         * Then verify that the authenticated
-         * user has ADMIN role.
-         */
 
         return jwtService.isAdmin(
                 token
@@ -261,10 +271,6 @@ public class UserController {
                 user.getPhone()
         );
 
-        /*
-         * Password is intentionally NOT printed.
-         */
-
         System.out.println(
                 "Role before service: " +
                 user.getRole()
@@ -302,14 +308,6 @@ public class UserController {
                     savedUser.getRole()
             );
 
-
-            /*
-             * Do not send the password back.
-             *
-             * Registration does not need to
-             * automatically log the user in,
-             * so no JWT token is generated here.
-             */
 
             return ResponseEntity.ok(
                     createSafeUserResponse(
@@ -386,7 +384,7 @@ public class UserController {
 
 
     // =========================================
-    // NORMAL EMAIL + PASSWORD LOGIN
+    // NORMAL LOGIN
     // =========================================
 
     @PostMapping("/login")
@@ -426,10 +424,6 @@ public class UserController {
         }
 
 
-        /*
-         * Generate JWT after successful login.
-         */
-
         String token =
                 userService.generateLoginToken(
                         user
@@ -455,12 +449,6 @@ public class UserController {
                     );
         }
 
-
-        /*
-         * Return safe user information.
-         *
-         * Password is NOT included.
-         */
 
         return ResponseEntity.ok(
                 createSafeUserResponse(
@@ -528,10 +516,6 @@ public class UserController {
         }
 
 
-        /*
-         * Generate JWT for Google login too.
-         */
-
         String token =
                 userService.generateLoginToken(
                         user
@@ -568,12 +552,177 @@ public class UserController {
 
 
     // =========================================
-    // GET ALL USERS
+    // GET CURRENT USER PROFILE
     // =========================================
 
     /*
-     * ADMIN ONLY
+     * CUSTOMER + ADMIN
+     *
+     * GET /api/users/me
+     *
+     * Uses the JWT token to identify the
+     * currently logged-in user.
      */
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        Long userId =
+                getAuthenticatedUserId(
+                        authorizationHeader
+                );
+
+
+        if (
+                userId == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Authentication required."
+                            )
+                    );
+        }
+
+
+        User user =
+                userService.getCurrentUser(
+                        userId
+                );
+
+
+        if (
+                user == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "User account is unavailable or locked."
+                            )
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                createSafeUserResponse(
+                        user,
+                        null
+                )
+        );
+    }
+
+
+    // =========================================
+    // UPDATE CURRENT USER PROFILE
+    // =========================================
+
+    /*
+     * CUSTOMER + ADMIN
+     *
+     * PUT /api/users/me
+     *
+     * Only name and phone can be changed.
+     *
+     * Email and role cannot be changed here.
+     */
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(
+            @RequestBody User updatedUser,
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader) {
+
+
+        Long userId =
+                getAuthenticatedUserId(
+                        authorizationHeader
+                );
+
+
+        if (
+                userId == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.UNAUTHORIZED
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Authentication required."
+                            )
+                    );
+        }
+
+
+        User user =
+                userService.updateCurrentUser(
+                        userId,
+                        updatedUser
+                );
+
+
+        if (
+                user == null
+        ) {
+
+            return ResponseEntity
+                    .status(
+                            HttpStatus.NOT_FOUND
+                    )
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+
+                                    "message",
+                                    "Unable to update profile."
+                            )
+                    );
+        }
+
+
+        return ResponseEntity.ok(
+                createSafeUserResponse(
+                        user,
+                        null
+                )
+        );
+    }
+
+
+    // =========================================
+    // GET ALL USERS
+    // =========================================
 
     @GetMapping
     public ResponseEntity<?> getAllUsers(
@@ -616,10 +765,6 @@ public class UserController {
     // GET ACTIVE USERS
     // =========================================
 
-    /*
-     * ADMIN ONLY
-     */
-
     @GetMapping("/active")
     public ResponseEntity<?> getActiveUsers(
             @RequestHeader(
@@ -661,10 +806,6 @@ public class UserController {
     // GET DELETED USERS
     // =========================================
 
-    /*
-     * ADMIN ONLY
-     */
-
     @GetMapping("/deleted")
     public ResponseEntity<?> getDeletedUsers(
             @RequestHeader(
@@ -705,10 +846,6 @@ public class UserController {
     // =========================================
     // UPDATE USER
     // =========================================
-
-    /*
-     * ADMIN ONLY
-     */
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(
@@ -760,10 +897,6 @@ public class UserController {
         }
 
 
-        /*
-         * Do not return password.
-         */
-
         return ResponseEntity.ok(
                 createSafeUserResponse(
                         user,
@@ -776,14 +909,6 @@ public class UserController {
     // =========================================
     // MOVE USER TO DELETE BIN
     // =========================================
-
-    /*
-     * ADMIN ONLY
-     *
-     * DELETE /api/users/{id}
-     *
-     * This is now a SOFT DELETE.
-     */
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(
@@ -839,10 +964,6 @@ public class UserController {
     // RESTORE USER
     // =========================================
 
-    /*
-     * ADMIN ONLY
-     */
-
     @PostMapping("/{id}/restore")
     public ResponseEntity<String> restoreUser(
             @PathVariable Long id,
@@ -897,10 +1018,6 @@ public class UserController {
     // PERMANENT DELETE
     // =========================================
 
-    /*
-     * ADMIN ONLY
-     */
-
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<String> permanentlyDeleteUser(
             @PathVariable Long id,
@@ -952,7 +1069,7 @@ public class UserController {
 
 
     // =========================================
-    // INVALID JSON / REQUEST BODY
+    // INVALID JSON
     // =========================================
 
     @ExceptionHandler(
@@ -961,31 +1078,6 @@ public class UserController {
     public ResponseEntity<Map<String, Object>>
     handleInvalidRequestBody(
             HttpMessageNotReadableException e) {
-
-
-        System.err.println(
-                "========================================="
-        );
-
-        System.err.println(
-                "INVALID REQUEST BODY"
-        );
-
-        System.err.println(
-                "Exception Type: " +
-                e.getClass().getName()
-        );
-
-        System.err.println(
-                "Exception Message: " +
-                e.getMessage()
-        );
-
-        System.err.println(
-                "========================================="
-        );
-
-        e.printStackTrace();
 
 
         Map<String, Object> error =
@@ -1033,28 +1125,6 @@ public class UserController {
     handleGeneralException(
             Exception e) {
 
-
-        System.err.println(
-                "========================================="
-        );
-
-        System.err.println(
-                "CONTROLLER ERROR"
-        );
-
-        System.err.println(
-                "Exception Type: " +
-                e.getClass().getName()
-        );
-
-        System.err.println(
-                "Exception Message: " +
-                e.getMessage()
-        );
-
-        System.err.println(
-                "========================================="
-        );
 
         e.printStackTrace();
 

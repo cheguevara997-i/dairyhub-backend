@@ -165,10 +165,6 @@ public class UserService {
                 existingUser != null
         ) {
 
-            // ---------------------------------
-            // DELETED ACCOUNT
-            // ---------------------------------
-
             if (
                     isDeleted(
                             existingUser
@@ -180,10 +176,6 @@ public class UserService {
                 );
             }
 
-
-            // ---------------------------------
-            // ACTIVE ACCOUNT
-            // ---------------------------------
 
             throw new RuntimeException(
                     "An account with this email already exists."
@@ -329,11 +321,6 @@ public class UserService {
         }
 
 
-        /*
-         * Never generate a token for an account
-         * currently inside the Delete Bin.
-         */
-
         if (
                 Boolean.TRUE.equals(
                         user.getDeleted()
@@ -469,11 +456,6 @@ public class UserService {
             if (
                     existingUser != null
             ) {
-
-                /*
-                 * Deleted Google accounts cannot
-                 * login through Google.
-                 */
 
                 if (
                         isDeleted(
@@ -611,8 +593,175 @@ public class UserService {
 
 
     // =========================================
+    // GET CURRENT LOGGED-IN USER
+    // =========================================
+
+    public User getCurrentUser(
+            Long userId) {
+
+        if (
+                userId == null
+        ) {
+
+            return null;
+        }
+
+
+        User user =
+                userRepository
+                        .findById(
+                                userId
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return null;
+        }
+
+
+        // =====================================
+        // DELETED USER CANNOT ACCESS PROFILE
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return null;
+        }
+
+
+        return user;
+    }
+
+
+    // =========================================
+    // UPDATE CURRENT USER PROFILE
+    // =========================================
+
+    public User updateCurrentUser(
+            Long userId,
+            User updatedUser) {
+
+        if (
+                userId == null ||
+                updatedUser == null
+        ) {
+
+            return null;
+        }
+
+
+        User user =
+                userRepository
+                        .findById(
+                                userId
+                        )
+                        .orElse(null);
+
+
+        if (
+                user == null
+        ) {
+
+            return null;
+        }
+
+
+        // =====================================
+        // DELETED USER CANNOT UPDATE PROFILE
+        // =====================================
+
+        if (
+                isDeleted(
+                        user
+                )
+        ) {
+
+            return null;
+        }
+
+
+        // =====================================
+        // UPDATE NAME ONLY
+        // =====================================
+
+        if (
+                updatedUser.getName() != null
+        ) {
+
+            String name =
+                    updatedUser.getName()
+                            .trim();
+
+
+            if (
+                    !name.isEmpty()
+            ) {
+
+                user.setName(
+                        name
+                );
+            }
+        }
+
+
+        // =====================================
+        // UPDATE PHONE
+        // =====================================
+
+        if (
+                updatedUser.getPhone() != null
+        ) {
+
+            user.setPhone(
+                    updatedUser.getPhone()
+                            .trim()
+            );
+
+        } else {
+
+            user.setPhone(
+                    null
+            );
+        }
+
+
+        /*
+         * IMPORTANT:
+         *
+         * We intentionally DO NOT update:
+         *
+         * email
+         * password
+         * role
+         * adminManaged
+         * deleted
+         * deletedAt
+         *
+         * through the profile API.
+         */
+
+
+        return userRepository.save(
+                user
+        );
+    }
+
+
+    // =========================================
     // UPDATE USER
     // =========================================
+
+    /*
+     * ADMIN ONLY
+     */
 
     public User updateUser(
             Long id,
@@ -635,10 +784,6 @@ public class UserService {
         User user =
                 optionalUser.get();
 
-
-        // =====================================
-        // DELETED USERS CANNOT BE EDITED
-        // =====================================
 
         if (
                 isDeleted(
@@ -776,10 +921,6 @@ public class UserService {
         }
 
 
-        // =====================================
-        // PROTECTED ADMIN
-        // =====================================
-
         if (
                 isProtectedAdmin(
                         user
@@ -790,10 +931,6 @@ public class UserService {
         }
 
 
-        // =====================================
-        // ALREADY DELETED
-        // =====================================
-
         if (
                 isDeleted(
                         user
@@ -803,10 +940,6 @@ public class UserService {
             return false;
         }
 
-
-        // =====================================
-        // SOFT DELETE
-        // =====================================
 
         user.setDeleted(
                 true
@@ -849,10 +982,6 @@ public class UserService {
             return false;
         }
 
-
-        // =====================================
-        // MUST BE DELETED
-        // =====================================
 
         if (
                 !isDeleted(
@@ -906,10 +1035,6 @@ public class UserService {
         }
 
 
-        // =====================================
-        // PROTECTED ADMIN
-        // =====================================
-
         if (
                 isProtectedAdmin(
                         user
@@ -919,10 +1044,6 @@ public class UserService {
             return false;
         }
 
-
-        // =====================================
-        // ONLY DELETE USERS IN BIN
-        // =====================================
 
         if (
                 !isDeleted(
@@ -978,10 +1099,6 @@ public class UserService {
                 deletedUsers
         ) {
 
-            // ---------------------------------
-            // NEVER DELETE PROTECTED ADMIN
-            // ---------------------------------
-
             if (
                     isProtectedAdmin(
                             user
@@ -996,11 +1113,6 @@ public class UserService {
                     user.getDeletedAt();
 
 
-            /*
-             * If deletedAt is missing,
-             * leave the account untouched.
-             */
-
             if (
                     deletedAt == null
             ) {
@@ -1008,10 +1120,6 @@ public class UserService {
                 continue;
             }
 
-
-            // ---------------------------------
-            // EXPIRED
-            // ---------------------------------
 
             if (
                     deletedAt.isBefore(
